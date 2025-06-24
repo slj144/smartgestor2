@@ -1,0 +1,129 @@
+/*
+  📁 ARQUIVO: cashier-pdv.component.scss
+  📂 LOCALIZAÇÃO: src/app/pages/cashier/cashier-front/components/cashier-pdv/
+  🎯 FUNÇÃO: Estilos CSS do componente PDV
+  ✨ MODIFICAÇÃO: Adicionado estilos para o campo de garantia e botões de sugestão
+*/
+
+#container-cashier-pdv {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  /* 🆕 ESTILOS ADICIONADOS PARA O CAMPO DE GARANTIA */
+  .container-settings {
+    .warranty-field {
+      position: relative;
+      display: flex;
+      align-items: center;
+      margin-top: 10px;
+
+      .warranty-icon {
+        position: absolute;
+        left: 12px;
+        color: #667eea;
+        font-size: 18px;
+        z-index: 1;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .input-warranty {
+        padding-left: 40px !important;
+        background-color: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+
+        &:focus {
+          border-color: #667eea;
+          background-color: white;
+          box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        &::placeholder {
+          color: #999;
+          font-size: 13px;
+        }
+      }
+    }
+
+    /* 🆕 ESTILOS PARA OS BOTÕES DE SUGESTÃO DE GARANTIA */
+    .warranty-suggestions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+
+      .btn-suggestion {
+        padding: 6px 12px;
+        font-size: 12px;
+        border: 1px solid #ddd;
+        background-color: #f8f9fa;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #666;
+
+        &:hover {
+          background-color: #667eea;
+          color: white;
+          border-color: #667eea;
+          transform: translateY(-1px);
+        }
+
+        &:active {
+          transform: translateY(0);
+        }
+      }
+    }
+  }
+}
+
+/* 🎯 SOLUÇÃO INTELIGENTE PARA O SCROLL */
+
+/* 1. Área de pagamentos cresce até um limite, depois adiciona scroll */
+.container-payment .data {
+  max-height: 400px !important;
+  /* Altura máxima antes de aparecer scroll */
+  overflow-y: auto !important;
+  /* Scroll só quando necessário */
+  overflow-x: hidden !important;
+
+  /* Scroll mais bonito e fino */
+  &::-webkit-scrollbar {
+    width: 6px !important;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1 !important;
+    border-radius: 3px !important;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e0 !important;
+    border-radius: 3px !important;
+
+    &:hover {
+      background: #a0aec0 !important;
+    }
+  }
+}
+
+/* 2. Aumenta o botão de adicionar pagamento (+) e deixa azul */
+.container-payment h6 button {
+  width: 40px !important;
+  height: 40px !important;
+  background-color: #667eea !important;
+  color: white !important;
+  border: none !important;
+
+  icon {
+    font-size: 24px !important;
+  }
+
+  &:hover {
+    background-color: #5a67d8 !important;
+  }
+}

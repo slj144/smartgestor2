@@ -1,0 +1,98 @@
+
+<div id="products-selector">
+
+  <header>
+    <div class="container-search">
+      <div #searchBar class="search-bar">
+        
+        <button class="btnFilter" (click)="onFilter()">
+          <button class="badge" *ngIf="filtersBadge > 0">{{ filtersBadge }}</button>
+          <icon name="funnel-outline" pack="eva"></icon>
+        </button>
+
+        <input type="text" name="search" [placeholder]="translate.searchBar.placeholder" autocomplete="off" (keydown.enter)="onSearch()" #input />
+
+        <button class="btnReset" *ngIf="input.value != ''" (click)="onResetSearchBar()"><icon name="close" pack="eva"></icon></button>
+        <button class="btnSearch" (click)="onSearch()"><icon name="search-outline" pack="eva"></icon></button>
+      </div>
+    </div>    
+  </header>
+
+  <main>
+
+    <div class="container-search" *ngIf="recordsData?.length > 0">
+      <h5>{{ translate.search.info[0] + " - " + recordsData?.length + " " + translate.search.info[!settings.alt?.parts ? 1 : 2] }}</h5>
+
+      <div class="container">
+        <div class="table-responsive">
+          <table class="table table-borderless">
+            <tbody>
+              <tr *ngFor="let item of recordsData" [ngClass.outOfStock]="item.quantity <= 0">
+                <td>
+                  <div class="container-image">
+                    <img [src]="item.thumbnail?.url ?? 'assets/images/Stock/Products/image-placeholder.jpg'" />
+                  </div>
+                </td>
+                <td>
+                  <p class="name">{{ item.name }}</p>
+                  <p><span class="label">{{ translate.search.item.label.code + ':' }}</span> <span class="value">{{ item.code }}</span></p>         
+
+                  <p *ngIf="item.internalCode">
+                    <span class="label">{{ 'Código Interno:' }}</span> <span class="value">{{ item.internalCode }}</span>
+                  </p>
+
+                  <p *ngIf="item.serialNumber">
+                    <span class="label">{{ translate.search.item.label.serialNumber + ':' }}</span> <span class="value">{{ item.serialNumber }}</span>
+                  </p>
+
+                  <div class="container-info" *ngIf="item.quantity > 0">
+                    <p><span class="label">{{ translate.search.item.label.available + ':' }}</span> <span class="value">{{ item.quantity + ' ' + item.commercialUnit.name }}</span></p>
+                    <p><span class="label">{{ translate.search.item.label.price + ':' }}</span> <span class="value price">{{ item.salePrice | currency }}</span></p>
+                  </div>
+
+                  <div class="container-outOfStock" *ngIf="item.quantity <= 0">
+                    <p>{{ translate.search.item.label.outOfStock }}</p>
+                  </div>
+
+                  <div class="container-buttons" *ngIf="item.quantity > 0 || settings.selectAll">
+                    <button class="btn btn-default btn-select" *ngIf="!item.selected" (click)="onSelectProduct(item)"><icon name="checkmark" pack="eva"></icon> Selecionar</button>
+                    <button class="btn btn-default btn-remove" *ngIf="item.selected" (click)="onDeselectProduct(item)"><icon name="trash-2-outline" pack="eva"></icon> Remover</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>    
+    </div>  
+
+    <div class="container-placeholder" *ngIf="productsSelected?.length == 0">
+      <div class="wrapper">
+        <div *ngIf="!loading">
+
+          <div *ngIf="searchText == ''">
+            <img src="assets/images/_General/search-icon.jpg" />
+
+            <div class="info">
+              <p>{{ translate.placeholder.beforeSearch.label[!settings.alt?.parts ? 0 : 1] }}</p>
+              <small>{{ translate.placeholder.beforeSearch.instruction }}</small>
+            </div>
+          </div>
+          
+          <div *ngIf="searchText != ''">
+            <img src="assets/images/_General/search-icon-2.jpg" />
+
+            <div class="info">
+              <p>{{ translate.placeholder.afterSearch.label }}</p>
+            </div>
+          </div>
+
+        </div>
+
+        <placeholder [loading]="loading" [hasData]="true" [verticalAlign]="true"></placeholder>
+      </div>
+    </div>
+    
+  </main>
+
+</div>

@@ -1,0 +1,246 @@
+
+<main id="container-request-register">
+
+  <div class="panel">
+
+    <div class="container-components-one">
+
+      <div class="container-customer" *ngIf="companyProfile?.registers?.components?.customers">
+
+        <h6>
+          <span>{{ translate.panel.customer.title }}</span>
+          <button (click)="onOpenLayer('customers')"><icon name="search-outline" pack="eva"></icon></button>
+        </h6>
+
+        <div class="data" *ngIf="data.customer">
+          <div class="container-table table-responsive">
+            <table class="table table-borderless">
+              <tbody>
+                <tr>
+                  <td>
+                    <span><span class="label">{{ translate.panel.customer.label.name + ':' }}</span> <span class="value">{{ data.customer.name }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.personalDocument">
+                    <span><span class="label">{{ data.customer.personalDocument.type + ':' }}</span> <span class="value">{{ data.customer.personalDocument.value }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.businessDocument">
+                    <span><span class="label">{{ data.customer.businessDocument.type + ':' }}</span> <span class="value">{{ data.customer.businessDocument.value }}</span></span>
+                  </td>
+                </tr>
+                <tr>
+                  <td *ngIf="data.customer?.address">
+                    <span><span class="label">{{ translate.panel.customer.label.address + ':' }}</span> <span class="value">{{ data.customer?.address }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.contacts?.phone">
+                    <span><span class="label">{{ translate.panel.customer.label.phone + ':' }}</span> <span class="value">{{ data.customer?.contacts?.phone }}</span></span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      
+      <div class="container-member" *ngIf="companyProfile?.registers?.components?.members">
+
+        <h6>
+          <span>{{ translate.panel.member.title }}</span>
+          <button (click)="onOpenLayer('members')" [disabled]="data.code"><icon name="search-outline" pack="eva"></icon></button>
+        </h6>
+
+        <div class="data" *ngIf="data.member">
+          <div class="container-table table-responsive">
+            <table class="table table-borderless">
+              <tbody>
+                <tr>
+                  <td>
+                    <span><span class="label">{{ translate.panel.member.label.name + ':' }}</span> <span class="value">{{ data.member.name }}</span></span>
+                  </td>
+                  <td *ngIf="data.member?.cpf">
+                    <span><span class="label">{{ translate.panel.member.label.personalDocument + ':' }}</span> <span class="value">{{ data.member.cpf }}</span></span>
+                  </td>
+                  <td *ngIf="data.member?.cnpj">
+                    <span><span class="label">{{ translate.panel.member.label.businessDocument + ':' }}</span> <span class="value">{{ data.member.cnpj }}</span></span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <span><span class="label">{{ translate.panel.member.label.address + ':' }}</span> <span class="value">{{ data.member?.address }}</span></span>
+                  </td>
+                  <td>
+                    <span><span class="label">{{ translate.panel.member.label.phone + ':' }}</span> <span class="value">{{ data.member?.contacts?.phone }}</span></span>
+                  </td>
+                </tr>              
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="container-products">
+
+        <h6>
+          <span>{{ translate.panel.products.title }}</span>
+
+          <div class="quick-search">
+            <input type="text" [placeholder]="translate.panel.products.quickSearch.placeholder" autocomplete="off" (keydown.enter)="onQuickSearch(inputQuickSearch)" (input)="onApplyNumberMask($event)" #inputQuickSearch />
+            <button (click)="onQuickSearch(inputQuickSearch)"><icon name="search-outline" pack="eva"></icon></button>
+          </div>
+
+          <button (click)="onOpenLayer('products')"><icon name="funnel-outline" pack="eva"></icon></button>
+        </h6>
+
+        <div class="data">
+
+          <div *ngIf="data.products?.length > 0">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>{{ translate.panel.products.label.code }}</th>
+                    <th class="text-left">{{ translate.panel.products.label.name }}</th> 
+                    <th >
+                      Código Interno
+                    </th>               
+                    <th>{{ translate.panel.products.label.quantity }}</th>
+                    <th>{{ translate.panel.products.label.price }}</th>
+                    <th>{{ translate.panel.products.label.total }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of data.products; let i = index">
+                    <td class="action">
+                      <button class="btnClose" (click)="onDeleteProductItem(i)"><icon name="close" pack="eva"></icon></button>
+                    </td>
+                    <td class="code">{{ item.code }}</td>
+                    <td class="name">{{ item.name }}</td>
+                    <td class="price">{{ item.internalCode }}</td>
+                    <td class="quantity">
+                      <input class="{{ data.scheme && !data.code && item.quantity == 0 ? 'outStock' : '' }}" [value]="item.selectedItems ?? 1" autocomplete="off" (input)="onApplyQuantity(item, quantityField)" (blur)="onApplyQuantityCorretion(item, quantityField)" #quantityField />
+                    </td>
+                    <td class="price">
+                      <input [value]="item.unitaryPrice | currency:''" autocomplete="off" (input)="onApplyPrice(item, priceField)" #priceField />
+                    </td>
+                    <td class="total">
+                      <input [value]="(item.unitaryPrice * item.selectedItems) | currency:''" [disabled]="true" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="!data.products || (data.products?.length == 0)" class="placeholder-container">
+            <div class="wrapper">
+              <div class="icon-container">
+                <icon name="shopping-bag-outline" pack="eva"></icon>
+              </div>
+              <button class="btn btn-primary btn-add" (click)="onOpenLayer('products')">Adicionar produtos</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>  
+
+    </div>
+
+    <div class="container-components-two">
+
+      <div class="container-settings">
+
+        <h6>{{ translate.panel.settings.title }}</h6>
+
+        <div class="data">
+
+          <div class="settings-item schemes" *ngIf="schemes?.length && settings.action == 'Requests/create'">
+            <h6 class="py-1">{{ translate.panel.scheme.title }}</h6>
+
+            <fieldset>
+              <div *ngFor="let scheme of schemes">
+                <div class="row">
+                  <label [for]="scheme._id"><input [id]="scheme._id" class="mt-1" name="scheme" type="checkbox" (input)="onChangeScheme($event, scheme)"> <span >{{ scheme.name }}</span></label>
+                  <div class="form-group" *ngIf="this.data?.scheme?.includes(scheme.code)">
+                    <label class="custom-control-label">{{ translate.panel.scheme.quantity }}</label>
+                    <input class="form-control" value="1" type="text" (input)="onApplyNumberMask($event);onChangeQuantityScheme(scheme, $event)"   />
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+    
+          </div>
+
+          <div class="settings-item">
+
+            <div class="option">
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="customSwitch1" (change)="onCaptureCompleteOrder(inputCompleteOrder)" #inputCompleteOrder />
+                <label class="custom-control-label" for="customSwitch1">{{ translate.panel.settings.option.conclusion.label }}</label>          
+              </div>
+            </div>
+
+            <div class="description">
+              <small>{{ translate.panel.settings.option.conclusion.description }}</small>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="container-balance">
+
+        <div class="data">
+          <div class="container-subtotal">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <thead>
+                  <tr>
+                    <th colspan="2">{{ translate.panel.balance.label.subtotal.title }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.products }}</span> <span class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalProducts || 0) | currency }}</span></td>
+                  </tr>               
+                  <tr>
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.discount }}</span> <span class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalDiscount || 0) | currency }}</span></td>              
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="container-total">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <th>{{ translate.panel.balance.label.total }}</th>
+                    <td>{{ (data.balance?.totalSale || 0) | currency }}</td>
+                  </tr>
+                </tbody>              
+              </table>
+            </div>
+          </div>        
+        </div>
+
+      </div>
+      
+      <div class="container-button">
+        <button class="btn btn-confirm" (click)="onRegister()" [disabled]="!(!sending && (data.customer || data.member) && (data.products?.length > 0) && (checkProducts))">{{ translate.panel.button.register }}</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <requests-register-layer (callback)="onLayerResponse($event)"></requests-register-layer>
+
+</main>

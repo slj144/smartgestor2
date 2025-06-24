@@ -1,0 +1,810 @@
+// ARQUIVO: message-templates.component.scss
+// CAMINHO: src/app/pages/crm/components/message-templates/message-templates.component.scss
+// VERSÃO: Interface simplificada e fácil de usar
+
+// ===== VARIÁVEIS =====
+$primary: #25D366;
+$primary-dark: #128C7E;
+$garantia: #4CAF50;
+$background: #f8f9fa;
+$border: #e9ecef;
+$text: #495057;
+$text-light: #6c757d;
+
+// ===== RESET E BASE =====
+* {
+    box-sizing: border-box;
+}
+
+// ===== OVERLAY =====
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+}
+
+// ===== CONTAINER PRINCIPAL =====
+.modal-container {
+    background: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 1200px;
+    height: 90vh;
+    max-height: 800px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+
+    &.garantia-mode {
+        box-shadow: 0 0 0 3px $garantia, 0 20px 60px rgba($garantia, 0.2);
+    }
+}
+
+// ===== CABEÇALHO =====
+.modal-header {
+    background: $primary;
+    color: white;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+
+    &.garantia-header {
+        background: $garantia;
+    }
+
+    h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        font-size: 20px;
+        font-weight: 600;
+    }
+
+    .garantia-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .close-btn {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+    }
+}
+
+// ===== ALERTA GARANTIA SIMPLIFICADO =====
+.garantia-alert-simple {
+    background: linear-gradient(to right, #e8f5e9, #c8e6c9);
+    padding: 12px 20px;
+    border-bottom: 1px solid $garantia;
+    flex-shrink: 0;
+
+    .alert-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        .alert-icon {
+            font-size: 20px;
+            animation: bounce 1s ease-in-out infinite;
+        }
+
+        .alert-text {
+            flex: 1;
+            color: darken($garantia, 20%);
+            font-weight: 500;
+        }
+
+        .btn-dismiss {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: $text-light;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+
+            &:hover {
+                color: $text;
+            }
+        }
+    }
+}
+
+// ===== INFO CLIENTE SIMPLIFICADA =====
+.customer-info-simple {
+    background: $background;
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: $text;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+
+    icon {
+        color: $text-light;
+    }
+
+    .customer-name {
+        font-weight: 600;
+    }
+
+    .separator {
+        color: $text-light;
+    }
+
+    .tag-garantia {
+        margin-left: auto;
+        background: rgba($garantia, 0.1);
+        color: $garantia;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+}
+
+// ===== CONTEÚDO PRINCIPAL =====
+.modal-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    background: $background;
+}
+
+// ===== PAINEL LATERAL =====
+.sidebar-panel {
+    width: 380px;
+    background: white;
+    border-right: 1px solid $border;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+// ===== ABAS DE CATEGORIA =====
+.category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 16px;
+    background: $background;
+    border-bottom: 1px solid $border;
+    max-height: 120px;
+    overflow-y: auto;
+    flex-shrink: 0;
+
+    .category-tab {
+        background: white;
+        border: 1px solid $border;
+        border-radius: 8px;
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-size: 13px;
+        color: $text;
+
+        icon {
+            font-size: 16px;
+            color: $text-light;
+        }
+
+        .cat-label {
+            font-weight: 500;
+        }
+
+        .cat-count {
+            background: $background;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 11px;
+            color: $text-light;
+        }
+
+        &:hover {
+            background: $background;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        &.active {
+            background: $primary;
+            color: white;
+            border-color: $primary;
+
+            icon,
+            .cat-count {
+                color: white;
+                background: rgba(255, 255, 255, 0.2);
+            }
+        }
+
+        &.garantia-category.active {
+            background: $garantia;
+            border-color: $garantia;
+        }
+    }
+}
+
+// ===== BUSCA SIMPLIFICADA =====
+.search-simple {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+
+    icon {
+        color: $text-light;
+        font-size: 20px;
+    }
+
+    input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 14px;
+        color: $text;
+
+        &::placeholder {
+            color: $text-light;
+        }
+    }
+
+    .btn-clear {
+        background: none;
+        border: none;
+        padding: 4px;
+        cursor: pointer;
+        color: $text-light;
+        display: flex;
+        align-items: center;
+
+        &:hover {
+            color: $text;
+        }
+    }
+}
+
+// ===== CONTAINER DE TEMPLATES =====
+.templates-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: $background;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #cbd5e0;
+        border-radius: 3px;
+
+        &:hover {
+            background: #a0aec0;
+        }
+    }
+}
+
+// ===== TÍTULOS DE SEÇÃO =====
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $text-light;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+
+    icon {
+        font-size: 16px;
+    }
+}
+
+// ===== CARDS DE TEMPLATE =====
+.template-card {
+    background: white;
+    border: 2px solid $border;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+        border-color: $primary;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transform: translateX(4px);
+    }
+
+    &.selected {
+        border-color: $primary;
+        background: rgba($primary, 0.05);
+    }
+
+    &.suggested {
+        background: #fffbf0;
+        border-color: #ffc107;
+
+        &.selected {
+            background: rgba(#ffc107, 0.1);
+        }
+    }
+
+    &.garantia-card {
+        border-left: 4px solid $garantia;
+
+        &.selected {
+            background: rgba($garantia, 0.05);
+            border-color: $garantia;
+        }
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+
+        .card-icon {
+            font-size: 16px;
+        }
+
+        .card-title {
+            flex: 1;
+            font-weight: 600;
+            color: $text;
+            font-size: 14px;
+        }
+
+        .new-badge {
+            background: #ff5252;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+    }
+
+    .card-preview {
+        color: $text-light;
+        font-size: 13px;
+        line-height: 1.4;
+        margin: 0 0 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .card-tags {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+
+        .tag {
+            background: $background;
+            color: $text-light;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+        }
+    }
+}
+
+// ===== MENSAGEM SEM TEMPLATES =====
+.no-templates {
+    text-align: center;
+    padding: 40px 20px;
+    color: $text-light;
+
+    icon {
+        font-size: 48px;
+        opacity: 0.3;
+        margin-bottom: 16px;
+    }
+
+    p {
+        margin: 0 0 16px;
+        font-size: 14px;
+    }
+
+    .btn-show-all {
+        background: $primary;
+        color: white;
+        border: none;
+        padding: 8px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+
+        &:hover {
+            background: $primary-dark;
+            transform: translateY(-1px);
+        }
+    }
+}
+
+// ===== PAINEL DO EDITOR =====
+.editor-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+
+    &.no-template {
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+// ===== MENSAGEM SELECIONAR TEMPLATE =====
+.select-template-message {
+    text-align: center;
+    padding: 40px;
+    color: $text-light;
+
+    icon {
+        font-size: 64px;
+        opacity: 0.2;
+        margin-bottom: 16px;
+    }
+
+    h3 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        color: $text;
+    }
+
+    p {
+        margin: 0;
+        font-size: 14px;
+    }
+}
+
+// ===== CONTEÚDO DO EDITOR =====
+.editor-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+// ===== CABEÇALHO DO EDITOR =====
+.editor-header-simple {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid $border;
+
+    h3 {
+        margin: 0;
+        font-size: 18px;
+        color: $text;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .editor-tools {
+        display: flex;
+        gap: 8px;
+
+        .tool-btn {
+            background: $background;
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+
+            &:hover {
+                background: darken($background, 5%);
+            }
+        }
+    }
+}
+
+// ===== TEXTAREA DO EDITOR =====
+.editor-textarea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+
+    textarea {
+        flex: 1;
+        width: 100%;
+        min-height: 200px;
+        max-height: 400px;
+        padding: 16px;
+        border: 2px solid $border;
+        border-radius: 10px;
+        font-size: 14px;
+        font-family: inherit;
+        resize: vertical;
+        transition: border-color 0.2s;
+
+        &:focus {
+            outline: none;
+            border-color: $primary;
+        }
+    }
+
+    .char-count {
+        text-align: right;
+        margin-top: 8px;
+        font-size: 12px;
+        color: $text-light;
+    }
+}
+
+// ===== PREVIEW SIMPLIFICADO =====
+.whatsapp-preview-simple {
+    background: $background;
+    border-radius: 10px;
+    padding: 16px;
+
+    h4 {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: $text-light;
+        font-weight: 600;
+    }
+
+    .preview-phone {
+        background: #e5ddd5;
+        border-radius: 8px;
+        padding: 16px;
+        max-height: 200px;
+        overflow-y: auto;
+
+        .message-bubble {
+            background: #dcf8c6;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-left: auto;
+            max-width: 80%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+
+            pre {
+                margin: 0;
+                font-family: inherit;
+                font-size: 14px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                color: #303030;
+            }
+
+            .message-time {
+                display: inline-block;
+                margin-top: 4px;
+                font-size: 11px;
+                color: #667781;
+                float: right;
+            }
+        }
+    }
+}
+
+// ===== RODAPÉ SIMPLIFICADO =====
+.modal-footer-simple {
+    padding: 16px 24px;
+    background: white;
+    border-top: 1px solid $border;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-shrink: 0;
+
+    button {
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-cancel {
+        background: $background;
+        border: 1px solid $border;
+        color: $text;
+
+        &:hover {
+            background: darken($background, 5%);
+        }
+    }
+
+    .btn-send {
+        background: $primary;
+        border: none;
+        color: white;
+
+        &:hover:not(:disabled) {
+            background: $primary-dark;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba($primary, 0.3);
+        }
+
+        &.garantia {
+            background: $garantia;
+
+            &:hover:not(:disabled) {
+                background: darken($garantia, 10%);
+                box-shadow: 0 4px 12px rgba($garantia, 0.3);
+            }
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    }
+}
+
+// ===== ANIMAÇÕES =====
+@keyframes pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    50% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+// ===== RESPONSIVIDADE =====
+@media (max-width: 768px) {
+    .modal-overlay {
+        padding: 0;
+    }
+
+    .modal-container {
+        border-radius: 0;
+        height: 100vh;
+        max-height: 100vh;
+    }
+
+    .modal-content {
+        flex-direction: column;
+    }
+
+    .sidebar-panel {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid $border;
+        height: 50%;
+    }
+
+    .category-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+
+        .cat-count {
+            display: none;
+        }
+    }
+}
+
+// ===== MELHORIAS DE PERFORMANCE =====
+.template-card,
+.category-tab,
+button {
+    will-change: transform;
+}
+
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+// ===== CORREÇÃO DE EMERGÊNCIA =====
+// Adicione isso no FINAL do arquivo SCSS
+
+// Forçar exibição do painel lateral
+.modal-content {
+    display: flex !important;
+    flex-direction: row !important;
+    min-height: 400px !important;
+}
+
+.sidebar-panel {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 380px !important;
+    min-width: 380px !important;
+    background: white !important;
+    border-right: 1px solid #e9ecef !important;
+    overflow: visible !important;
+}
+
+.templates-container {
+    display: block !important;
+    flex: 1 !important;
+    overflow-y: auto !important;
+    min-height: 200px !important;
+}
+
+.category-tabs {
+    display: flex !important;
+    visibility: visible !important;
+}
+
+.template-card {
+    display: block !important;
+    visibility: visible !important;
+}
+
+// Garantir que o editor não ocupe toda a tela
+.editor-panel {
+    flex: 1 !important;
+    max-width: calc(100% - 380px) !important;
+}

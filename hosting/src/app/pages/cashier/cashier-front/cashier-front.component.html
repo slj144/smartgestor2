@@ -1,0 +1,95 @@
+
+<div id="container-main">
+
+	<header *ngIf="cashierControl.status == 'OPENED'">
+
+		<div class="container-buttons-left">
+			<button class="btnRecords" (click)="onCashierRecords()" *ngIf="permissions.cashierRegisters">
+				<icon name="copy-outline" pack="eva"></icon> <span>{{ translate.shortcut.cashRecords }}</span>
+			</button>
+
+			<button class="btnInflow" (click)="onCashierInflow()" *ngIf="permissions.inputs">
+				<icon name="log-in-outline" pack="eva"></icon> <span>{{ translate.shortcut.cashInflow }}</span>
+			</button>
+
+			<button class="btnOutflow" (click)="onCashierOutflow()" *ngIf="permissions.outputs">
+				<icon name="log-out-outline" pack="eva"></icon> <span>{{ translate.shortcut.cashOutflow }}</span>
+			</button>
+
+			<button class="btnSummary" (click)="onCashierReports()" *ngIf="permissions.cashierResume">
+				<icon name="file-text-outline" pack="eva"></icon> <span>{{ translate.shortcut.cashSummary }}</span>
+			</button>
+		</div>
+
+		<div class="container-buttons-right">
+
+			<button class="btnClosing" (click)="onCashierClosing()" *ngIf="permissions.control?.closing">
+				<icon name="lock-outline" pack="eva"></icon> <span>{{ translate.shortcut.cashClosing }}</span>
+			</button>
+
+			<div class="dropdown">				
+        <button class="btnGroup" data-bs-toggle="dropdown">
+          <icon name="list-outline" pack="eva"></icon>
+        </button>
+
+				<ul class="dropdown-menu dropdown-menu-right">
+
+					<li class="cashierRecords" (click)="onCashierRecords()" *ngIf="permissions.cashierRegisters">
+						<span class="dropdown-item"><icon name="copy-outline" pack="eva"></icon> {{ translate.dropdown.cashRecords }}</span>
+					</li>
+
+					<li class="cashierInflow" (click)="onCashierInflow()" *ngIf="permissions.inputs">
+						<span class="dropdown-item"><icon name="log-in-outline" pack="eva"></icon> {{ translate.dropdown.cashInflow }}</span>
+					</li>
+
+					<li class="cashierOutflow" (click)="onCashierOutflow()" *ngIf="permissions.outputs">
+						<span class="dropdown-item"><icon name="log-out-outline" pack="eva"></icon> {{ translate.dropdown.cashOutflow }}</span>
+					</li>
+
+					<li class="cashierRecords" (click)="onCashierRecords()" *ngIf="permissions.cashRegisters">
+						<span class="dropdown-item mark-top"><icon name="copy-outline" pack="eva"></icon> {{ translate.dropdown.cashRecords }}</span>
+					</li>
+					
+					<li class="cashierReports" (click)="onCashierReports()" *ngIf="permissions.cashierResume">
+						<span class="dropdown-item"><icon name="file-text-outline" pack="eva"></icon> {{ translate.dropdown.cashSummary }}</span>
+					</li>
+
+					<li class="cashierClear" (click)="onCashierClear()">
+						<span class="dropdown-item mark-top"><icon name="repeat-outline" pack="eva"></icon> {{ translate.dropdown.resetPanel }}</span>
+					</li>
+
+					<li class="fullscreen" (click)="onFullscreen()">
+						<span class="dropdown-item"><icon name="{{ !settingsComponent.fullscreen ? 'expand-outline' : 'collapse-outline' }}" pack="eva"></icon>  {{ translate.dropdown.fullscreen }}</span>
+					</li>
+
+					<li class="cashierClosing" (click)="onCashierClosing()" *ngIf="permissions.control?.closing">
+						<span class="dropdown-item mark-top"><icon name="lock-outline" pack="eva"></icon> {{ translate.dropdown.cashClosing }}</span>
+					</li>
+					
+				</ul>
+			</div>
+
+		</div>
+	</header>
+
+	<main *ngIf="!loading">
+		
+		<ng-container *ngIf="cashierControl.status == 'OPENED'">
+			<cashier-front-pdv [permissions]="permissions"></cashier-front-pdv>
+		</ng-container>
+
+		<ng-container *ngIf="(cashierControl.status == 'CLOSED') || (cashierControl.status == 'CLOSING')">
+			<cashier-front-control [settings]="settingsControl" [permissions]="permissions"></cashier-front-control>
+		</ng-container>
+
+	</main>
+
+	<placeholder [loading]="loading" [hasData]="true" [verticalAlign]="true"></placeholder>
+
+</div>
+
+<cashier-front-inflow></cashier-front-inflow>
+<cashier-front-outflow></cashier-front-outflow>
+<cashier-front-records></cashier-front-records>
+<cashier-front-reports></cashier-front-reports>
+<cashier-front-receipts></cashier-front-receipts>

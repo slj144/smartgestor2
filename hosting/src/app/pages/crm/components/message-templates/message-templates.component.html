@@ -1,0 +1,188 @@
+<!-- ARQUIVO: message-templates.component.html -->
+<!-- CAMINHO: src/app/pages/crm/components/message-templates/message-templates.component.html -->
+
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+    <div class="modal-container" [class.garantia-mode]="isGarantiaDetected" (click)="$event.stopPropagation()">
+
+        <!-- CABEÇALHO -->
+        <div class="modal-header" [class.garantia-header]="isGarantiaDetected">
+            <h2>
+                <icon name="message-circle-outline" pack="eva"></icon>
+                Templates de WhatsApp
+                <!-- Badge quando detecta garantia -->
+                <span class="garantia-badge animated" *ngIf="isGarantiaDetected">
+                    🛡️ Garantia Detectada
+                </span>
+            </h2>
+            <button class="close-btn" (click)="closeModal()">
+                <icon name="close-outline" pack="eva"></icon>
+            </button>
+        </div>
+
+        <!-- ALERTA DE GARANTIA SIMPLIFICADO -->
+        <div class="garantia-alert-simple" *ngIf="isGarantiaDetected && suggestedTemplates.length > 0">
+            <div class="alert-content">
+                <span class="alert-icon">🛡️</span>
+                <span class="alert-text">Sistema detectou garantia! Templates sugeridos abaixo.</span>
+                <button class="btn-dismiss" (click)="isGarantiaDetected = false">×</button>
+            </div>
+        </div>
+
+        <!-- INFORMAÇÕES DO CLIENTE SIMPLIFICADAS -->
+        <div class="customer-info-simple" *ngIf="customer">
+            <icon name="person-outline" pack="eva"></icon>
+            <span class="customer-name">{{ customer.name || customer.customerName || 'Cliente' }}</span>
+            <span class="separator">•</span>
+            <span class="customer-phone">{{ customer.phone || customer.customerPhone || 'Sem telefone' }}</span>
+            <span class="tag-garantia" *ngIf="isGarantiaDetected">🛡️ Com Garantia</span>
+        </div>
+
+        <!-- CONTEÚDO PRINCIPAL -->
+        <div class="modal-content">
+
+            <!-- PAINEL LATERAL - CATEGORIAS E TEMPLATES -->
+            <div class="sidebar-panel">
+
+                <!-- CATEGORIAS COMO ABAS -->
+                <div class="category-tabs">
+                    <button *ngFor="let cat of categories" class="category-tab"
+                        [class.active]="filterCategory === cat.value"
+                        [class.garantia-category]="cat.value.includes('garantia')" (click)="changeCategory(cat.value)">
+                        <icon [name]="cat.icon" pack="eva"></icon>
+                        <span class="cat-label">{{ cat.label }}</span>
+                        <span class="cat-count">{{ getTemplateCount(cat.value) }}</span>
+                    </button>
+                </div>
+
+                <!-- BUSCA SIMPLIFICADA -->
+                <div class="search-simple">
+                    <icon name="search-outline" pack="eva"></icon>
+                    <input type="text" placeholder="Buscar template..." [(ngModel)]="searchTerm"
+                        (ngModelChange)="onSearchChange()">
+                    <button class="btn-clear" *ngIf="searchTerm" (click)="clearSearch()">
+                        <icon name="close-outline" pack="eva"></icon>
+                    </button>
+                </div>
+
+                <!-- LISTA DE TEMPLATES -->
+                <div class="templates-container">
+
+                    <!-- Templates Sugeridos (se houver) -->
+                    <div class="suggested-section" *ngIf="suggestedTemplates.length > 0 && !searchTerm">
+                        <h4 class="section-title">
+                            <icon name="star-outline" pack="eva"></icon>
+                            Recomendados
+                        </h4>
+                        <div class="template-card suggested" *ngFor="let template of suggestedTemplates"
+                            [class.selected]="selectedTemplate?.id === template.id" (click)="selectTemplate(template)">
+                            <div class="card-header">
+                                <span class="card-icon" *ngIf="template.tags.includes('garantia')">🛡️</span>
+                                <span class="card-title">{{ template.name }}</span>
+                            </div>
+                            <p class="card-preview">{{ getTemplatePreview(template) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Todos os Templates -->
+                    <div class="all-templates-section">
+                        <h4 class="section-title" *ngIf="suggestedTemplates.length > 0 && !searchTerm">
+                            <icon name="list-outline" pack="eva"></icon>
+                            {{ filterCategory === 'all' ? 'Todos os Templates' : getCategoryName(filterCategory) }}
+                        </h4>
+
+                        <!-- Mensagem se não encontrar templates -->
+                        <div class="no-templates" *ngIf="getFilteredTemplates().length === 0">
+                            <icon name="inbox-outline" pack="eva"></icon>
+                            <p>Nenhum template encontrado</p>
+                            <button class="btn-show-all" (click)="filterCategory = 'all'; searchTerm = ''">
+                                Mostrar todos
+                            </button>
+                        </div>
+
+                        <!-- Lista de Templates -->
+                        <div class="template-card" *ngFor="let template of getFilteredTemplates()"
+                            [class.selected]="selectedTemplate?.id === template.id"
+                            [class.garantia-card]="template.tags.includes('garantia')"
+                            (click)="selectTemplate(template)">
+                            <div class="card-header">
+                                <span class="card-icon" *ngIf="template.tags.includes('garantia')">🛡️</span>
+                                <span class="card-title">{{ template.name }}</span>
+                                <span class="new-badge" *ngIf="isNewTemplate(template)">NOVO</span>
+                            </div>
+                            <p class="card-preview">{{ getTemplatePreview(template) }}</p>
+                            <div class="card-tags">
+                                <span class="tag" *ngFor="let tag of template.tags.slice(0, 3)">{{ tag }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÁREA DO EDITOR -->
+            <div class="editor-panel" [class.no-template]="!selectedTemplate">
+
+                <!-- Mensagem quando não tem template selecionado -->
+                <div class="select-template-message" *ngIf="!selectedTemplate">
+                    <icon name="message-square-outline" pack="eva"></icon>
+                    <h3>Selecione um template</h3>
+                    <p>Escolha um template na lista ao lado para começar</p>
+                </div>
+
+                <!-- Editor quando tem template -->
+                <div class="editor-content" *ngIf="selectedTemplate">
+
+                    <!-- Cabeçalho do Editor -->
+                    <div class="editor-header-simple">
+                        <h3>
+                            <span *ngIf="selectedTemplate.tags.includes('garantia')">🛡️</span>
+                            {{ selectedTemplate.name }}
+                        </h3>
+                        <div class="editor-tools">
+                            <button class="tool-btn" (click)="reloadTemplate()" title="Recarregar">
+                                <icon name="refresh-outline" pack="eva"></icon>
+                            </button>
+                            <button class="tool-btn" (click)="copyMessage()" title="Copiar">
+                                <icon name="copy-outline" pack="eva"></icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Textarea -->
+                    <div class="editor-textarea">
+                        <textarea [(ngModel)]="editedMessage" placeholder="Digite sua mensagem aqui..."
+                            [style.height.px]="getTextareaHeight()">
+                        </textarea>
+                        <div class="char-count">{{ editedMessage.length }} caracteres</div>
+                    </div>
+
+                    <!-- Preview WhatsApp -->
+                    <div class="whatsapp-preview-simple">
+                        <h4>Preview</h4>
+                        <div class="preview-phone">
+                            <div class="message-bubble">
+                                <pre>{{ editedMessage }}</pre>
+                                <span class="message-time">{{ getCurrentTime() }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RODAPÉ SIMPLIFICADO -->
+        <div class="modal-footer-simple">
+            <button class="btn-cancel" (click)="closeModal()">
+                Cancelar
+            </button>
+            <button class="btn-send" [class.garantia]="isGarantiaDetected"
+                [disabled]="!selectedTemplate || !editedMessage" (click)="confirmSend()">
+                <icon name="paper-plane-outline" pack="eva"></icon>
+                Enviar WhatsApp
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- getCurrentTime helper -->
+<ng-container *ngIf="false">{{ getCurrentTime() }}</ng-container>

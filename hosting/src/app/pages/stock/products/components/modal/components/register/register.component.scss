@@ -1,0 +1,254 @@
+
+#containerFormUpdate {
+  background-color: #fff;
+  height: 100vh;
+  form {
+    background-color: #fff;
+    margin: 0 auto;
+    padding: 20px 20px 15px;
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      display: block;
+      margin-bottom: -8px;
+      background-color: transparent;
+      padding-right: 5px;      
+      z-index: 10;
+    }
+    textarea {
+      height: 95px;
+      max-height: 95px;
+      &.important {
+        border-left-color: coral;
+        &:focus {
+          border-color: rgba(255, 127, 80, 0.75);
+        }
+      }
+    }
+    fieldset {
+      padding: 0;
+      &[disabled] {
+        opacity: 0.65;
+        background-color: #eee;
+      }
+    }
+    input {
+      &[type=file] {
+        display: none;
+      }
+      &[disabled] {
+        opacity: 0.65;
+        background-color: #eee;
+      } 
+    }          
+    small {
+      &.warning {
+        color: coral;
+        margin-top: 2px;
+        font-size: 11px;
+        display: block;
+        line-height: 12px;
+      }
+      &.error {
+        color: red;
+      }
+    }    
+    input, select, textarea {
+      font-size: 14px;
+      padding-bottom: 4px;
+      border: none;
+      border-bottom: 1px solid #555 !important;
+      border-radius: 0;      
+      box-shadow: none;
+      resize: none;
+    }
+    .supLabel {
+      margin-bottom: 0;
+      position: relative;
+      left: 10px;
+      background-color: #fff;
+      display: inline-block;
+    }
+    .tribute-name {
+      border-bottom: 1px dotted black;
+      padding: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      margin: 10px 0;      
+    }
+    .wrapper-block {
+      margin: 0 12px;
+      padding-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      z-index: 1;
+    }
+    .container-errors {
+      margin: 0;
+      small {
+        font-size: 13px;
+        color: red;
+      }
+    }
+    .container-button {
+      border-top: 1px solid #ccc;
+      button {
+        margin: 10px 0 10px auto;
+        display: block;
+        padding: 5px 40px;
+        border-radius: 8px;
+        font-size: 14px;
+        background-color: rgb(102, 102, 255);
+        color: #fff;    
+      }
+      @media screen and (max-width: 1024px) {
+        button {
+          width: 200px;
+          margin: 10px auto;
+        }
+      }
+    }
+    .container-form {
+      .container-field {
+        position: relative;
+        padding: 0;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+        button {
+          width: 30px;
+          height: 100%;
+          position: absolute;
+          top: 0; 
+          left: 0;      
+          margin: 0;
+          padding: 2px 0 0;
+          background-color: transparent;
+          border: none;
+          border-radius: 0;
+          outline: none;
+          text-align: right;
+          font-size: 14px;
+          font-weight: 500;
+          color: #666;
+          cursor: default;
+        }      
+        input {
+          font-size: 14px;    
+          padding-left: 30px;
+          &[disabled] {
+            background-color: rgba(255, 255, 255, 0.85);
+          }
+        } 
+      }
+      .manager-quantity,
+      .manager-commecial-unit,
+      .manager-category,
+      .manager-provider {
+        select, fieldset {
+          width: calc(100% - 40px);
+          margin-right: 5px;
+          float: left;
+        }
+        button {
+          width: 35px !important;
+          height: 35px !important;
+          padding: 0;
+          margin: 0;
+          float: left;
+          position: relative;
+          top: 0;
+          border-radius: 5px;
+          border: none;
+          outline: none;
+          color: #555;
+          border: 1px solid #555;
+          transition: all 0.3s ease;
+          icon {
+            font-size: 18px;
+          }
+          &:hover {
+            opacity: 0.75;
+          }
+        }
+      }
+    }
+    .deactivator {
+      margin-top: 10px;
+      padding: 5px 10px;
+      background-color: lightcyan !important;
+      border: 1px solid rgb(213, 213, 213);
+      border-radius: 5px;
+      table {
+        margin: 0;
+        tr {
+          td {
+            border: none;
+            padding: 10px 5px !important;
+            vertical-align: middle;
+            span {
+              font-size: 13px;
+            }
+            small {
+              color: #999;
+              font-size: 11px;
+            }
+            span, small {              
+              line-height: 13px;
+              display: block;
+            }
+            &:first-child {
+              width: 15px;
+              padding-left: 10px !important;
+              text-align: right;
+            }
+          }
+        }
+      }              
+    }
+    .required {
+      label {
+        color: red !important;
+      }
+      input {
+        border-color: red !important;
+      }
+    }
+    .container-fieldset {
+      margin-top: 10px !important;
+    }
+    .container-image {
+      .wrapper {      
+        width: 100%;
+        margin: 0 auto 10px;
+        border: 1px solid #ddd;
+        box-shadow: 0 2px 4px #ddd;
+        border-radius: 5px;
+        overflow: hidden;
+        background-color: lightcyan;
+        cursor: pointer;           
+        img {
+          width: 100%;
+          height: 100%;      
+        }       
+      }
+      @media screen and (max-width: 1024px) {
+        background-color: #eee;
+        border-radius: 10px;
+        padding: 10px 15px;
+        margin-bottom: 10px;
+        label {
+          margin-top: 10px !important;
+        }
+        .wrapper {
+          max-width: 200px;
+          max-height: 200px;
+          margin: 10px auto;
+        }
+      }
+    }
+    .resetPading {
+      padding: 0 !important;
+    }
+  }
+}

@@ -1,0 +1,407 @@
+
+modal {
+  #container-view {
+    .container-data {
+      padding: 0 5px;
+      section {
+        h5 {
+          line-height: 22px;
+          font-size: 13px;
+          font-weight: 600;
+          margin: 0 0 10px;
+          border-bottom: 1px solid #ddd;
+        }
+        .content {
+          padding: 0 0 5px;
+          padding-left: 15px;
+          p {
+            margin: 0;
+            line-height: 13px;
+            span {
+              display: inline;
+              &.label {
+                color: #666;
+                font-size: 11px;
+                font-weight: 600;
+              }
+              &.value {
+                color: #888;
+                font-size: 12px;
+                margin-left: 4px;
+              }
+            }
+          }     
+          .table-responsive {
+            table {
+              margin: 0;
+              th, td {
+                vertical-align: middle;
+                &.col-xsmall {
+                  width: 70px;
+                }
+                &.col-small {
+                  width: 110px;
+                }
+                &.col-medium {
+                  width: 138px;
+                }
+              }
+            }
+          } 
+        }
+        &.info {
+          table {
+            tr td {
+              font-size: 12px;
+              padding: 0;
+              &.date {
+                text-align: right;
+                padding-right: 10px;
+              }
+            }
+          }
+        }
+        &.checklist {
+          fieldset {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            ul {
+              margin: 0;
+              padding: 0;
+              list-style: none;
+              column-count: 2;
+              column-width: 50%;
+              column-gap: 20px;
+              li {
+                label {
+                  margin: 0 0 2px;
+                  padding: 0;
+                  display: block;
+                  user-select: none;
+                  input {
+                    margin-right: 5px;
+                    position: relative;
+                    top: 2px;
+                    &:disabled {
+                      background-color: rgba(255, 255, 255, 0.2);
+                    }
+                  }
+                  span {
+                    font-size: 12px;
+                    position: relative;
+                    top: -1px;
+                  }              
+                }
+                .sub {
+                  padding-left: 15px;
+                  border-top: 1px dotted #ddd;
+                  label {
+                    display: inline-block;
+                    margin-right: 10px;
+                    span {
+                      color: #555;
+                    }
+                  }
+                }
+              }
+            }            
+            &:disabled {
+              opacity: 1;
+            }
+          }
+        }
+        &.description {
+          .content {
+            width: 100%;
+            padding: 5px;
+            color: #777;
+            white-space: pre-line;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 13px;
+            margin-left: 15px; 
+          }
+        }
+        &.services, 
+        &.products {
+          table {
+            margin: 0;
+            thead {                  
+              tr {
+                font-size: 11px;                    
+                th {
+                  color: #777;
+                  padding: 0 10px;
+                  font-weight: 500;
+                  text-align: center;
+                  vertical-align: middle;
+                  border-bottom: 1px solid #ddd;
+                }                  
+              }
+            }
+            tbody {
+              tr {
+                border-bottom: 1px solid #ddd;
+                td {
+                  padding: 5px;
+                  vertical-align: middle;
+                  border-right: 1px solid #eee;                      
+                  span {
+                    font-size: 12px;
+                    &.price {
+                      color: goldenrod;
+                    }
+                  }   
+                  &:nth-child(1), &:nth-child(3),
+                  &:nth-child(4), &:nth-child(5) {
+                    text-align: center;
+                  }                  
+                  &:last-child {
+                    border-right: none;
+                    span.price {
+                      color: green;
+                    }
+                  }
+                }            
+                &:last-child {
+                  border-bottom: none;
+                }
+              }               
+            }
+          } 
+        }
+        &.balance {
+          table {
+            tr {
+              text-align: left;
+              th {
+                color: #555;
+                font-size: 13px;             
+                font-weight: 600;
+              } 
+              td {
+                color: #666;
+                .table-internal {   
+                  tr {                
+                    td {
+                      padding-top: 3px;
+                      padding-bottom: 3px;
+                      font-size: 11px;
+                      &.label {                          
+                        font-weight: 500;
+                        text-transform: uppercase;
+                      }
+                      &.value {
+                        font-weight: 600;
+                        text-align: left;
+                      }
+                    }
+                  }
+                }                  
+                &.total {
+                  color: coral;
+                  font-size: 13px;
+                  font-weight: 700;
+                  text-align: left;
+                }                  
+                &.removePadding {
+                  padding: 0 0 0 20px !important;
+                }
+              }                 
+              th, td {
+                vertical-align: middle;
+                padding: 5px 10px 5px 0;                  
+              }  
+              &.markLine {
+                border-top: 1px solid #000;
+              }             
+              &:last-child {
+                border-top: 1px dotted #ddd;
+              }                              
+            }          
+          }
+        }
+      }
+      .btnPrint,.btnNf {
+        font-size: 13px;
+        outline: none;
+        border-radius: 7px;
+        border: none;
+        padding: 8px 20px;
+        margin: 5px;
+        color: #fff;
+        box-shadow: 0 2px 4px #ccc;
+        background-color: rgb(102, 102, 255);
+        transition: all 0.5s ease-in-out;
+        icon {
+          font-size: 15px;
+          margin-right: 4px;
+        }
+        &:hover {
+          opacity: 0.8;
+        }  
+
+        &.btnNf{
+          // background-color: ;
+        }
+
+        &.center{
+          margin: 10px auto 0;
+          display: block;
+        }
+      }
+    }
+    .container-update-status {
+      padding: 30px 15px;
+  
+      .title{
+        font-size: 19px;
+        color: rgb(46, 46, 46);
+  
+        &.name{
+  
+          margin: 0;
+          font-size: 16px;
+          color: rgb(100, 99, 99);
+        }
+        small{
+          display: inline !important;
+          font-size: 16px !important;
+          padding: 0;
+          margin: 0;
+        }
+      }
+  
+      .label{
+        font-size: 12px;
+        line-height: 12px;
+        margin: 0;
+        text-align: left;
+      }
+      
+  
+      .description{
+  
+        margin-top: 10px;
+        text-align: center;
+      }
+  
+      .delete-checkbox{
+  
+        padding-top: 5px;
+        display: block;
+        cursor: pointer;
+  
+        input{
+  
+          border: 1px solid lightskyblue;
+          margin-right: 5px;
+          cursor: pointer;
+        }
+  
+        span{
+          position: relative;
+          top: -1px;
+        }
+  
+      }
+  
+      button {
+        margin: 10px auto 0 auto;
+        display: block;
+        padding: 5px 40px;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #fff;
+        border: 1px solid transparent;
+  
+        &:disabled{
+  
+          background-color: rgba(163, 163, 248, 0.809);
+        }
+  
+        &:enabled{
+  
+          background-color: rgb(102, 102, 255);
+        }
+  
+        &.btnConfirm {
+          background-color: rgb(102, 102, 255);
+        }
+        &.btnCancel {
+          background-color: indianred;
+        }
+      }  
+  
+      .container-buttons {
+        display: block;
+        text-align: center;
+        margin-top: 15px;
+        button {
+          display: inline-table;
+          padding: 5px 20px;
+          &:first-child {
+            margin-right: 5px;
+          }         
+        }
+      }       
+    }
+    .container-cancel,
+    .container-delete, 
+    .container-update-status {
+      .container-confirmation {
+        margin-top: 30px;
+        border-top: 1px solid #ccc;
+        .container-info {
+          padding: 20px 10px;
+          p {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            color: gray;
+          }
+          small {
+            width: 75%;
+            margin: 0 auto;
+            color: rgba(255, 0, 0, 0.75);
+            text-align: center;
+            display: block;
+          }
+        }
+        .container-buttons {
+          width: 100%;
+          height: 30px;
+          padding: 10px 0 0;
+          text-align: right;
+          display: table;
+          border-top: 1px dotted #ddd;
+          button {
+            height: 30px;
+            padding-left: 15px;
+            padding-right: 15px;
+            border: none;
+            border-radius: 5px;
+            outline: none;
+            display: inline-table;
+            transition: all 0.3s ease;
+            &.btnCancel {
+              color: rgba(234, 20, 20, 0.8) !important;
+              background-color: #fff !important;
+              font-size: 12px;
+              margin-right: 5px;
+            }
+            &.btnConfirm {
+              color: #fff !important;
+              background-color: rgb(100, 100, 234) !important;
+              font-size: 13px;
+            }
+            &:disabled {
+              opacity: 0.8;
+            }                 
+          }
+        }      
+      }
+    }
+  }
+}

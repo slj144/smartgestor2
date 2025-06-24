@@ -1,0 +1,37 @@
+<div #modal id="ContainerCustomModal">
+  <div class="container-view">
+    <div class="wrapper">
+      <div class="container-options">
+        <ul>
+          <li class="option-receipt-warranty">
+            <button (click)="onReceiptPrint('Warranty')">
+              <icon name="printer-outline" pack="eva"></icon>
+            </button>
+            <span><span class="title">{{ translate.settings.type.warranty }}</span><span class="format">{{
+                translate.settings.format.a4 }}</span></span>
+          </li>
+
+          <!-- BOTÃO DO WHATSAPP ADICIONADO AQUI -->
+          <li class="option-receipt-whatsapp" (click)="onSendWhatsApp()">
+            <button type="button">
+              <icon name="message-circle-outline" pack="eva"></icon>
+            </button>
+            <span>
+              <span class="title">{{ translate.settings.type.whatsapp }}</span>
+              <span class="format">{{ translate.settings.format.whatsapp }}</span>
+            </span>
+          </li>
+
+          <!-- <li class="option-receipt-delivery">
+            <button (click)="onReceiptPrint('Delivery')"><icon name="printer-outline" pack="eva"></icon></button>
+            <span><span class="title">{{ translate.settings.type.delivery }}</span><span class="format">{{ translate.settings.format.a4 }}</span></span>
+          </li> -->
+        </ul>
+
+        <button class="btnClose" (click)="onClose()">{{ translate.settings.button.close }}</button>
+      </div>
+
+      <service-order-print (callback)="onReceiptPrintResponse($event)"></service-order-print>
+    </div>
+  </div>
+</div>

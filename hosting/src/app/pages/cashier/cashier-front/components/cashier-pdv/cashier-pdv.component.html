@@ -1,0 +1,436 @@
+<!-- 
+  📁 ARQUIVO: cashier-pdv.component.html
+  📂 LOCALIZAÇÃO: src/app/pages/cashier/cashier-front/components/cashier-pdv/
+  🎯 FUNÇÃO: Template HTML do PDV - Interface visual onde o usuário adiciona produtos, cliente e pagamentos
+  ✨ MODIFICAÇÃO: Adicionado campo de GARANTIA na seção de configurações
+-->
+
+<div id="container-cashier-pdv">
+
+  <div class="panel">
+
+    <div class="container-components-one">
+
+      <div class="container-customer" *ngIf="companyProfile?.registers?.components?.customers">
+
+        <h6>
+          <span>{{ translate.panel.customer.title }}</span>
+          <button (click)="onOpenLayer('customers')">
+            <icon name="search-outline" pack="eva"></icon>
+          </button>
+        </h6>
+
+        <div class="data" *ngIf="data.customer">
+          <div class="container-table table-responsive">
+            <table class="table table-borderless">
+              <tbody>
+                <tr>
+                  <td>
+                    <span><span class="label">{{ translate.panel.customer.label.name + ':' }}</span> <span
+                        class="value">{{ data.customer.name }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.personalDocument">
+                    <span><span class="label">{{ data.customer.personalDocument.type + ':' }}</span> <span
+                        class="value">{{ data.customer.personalDocument.value }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.businessDocument">
+                    <span><span class="label">{{ data.customer.businessDocument.type + ':' }}</span> <span
+                        class="value">{{ data.customer.businessDocument.value }}</span></span>
+                  </td>
+                </tr>
+                <tr *ngIf="data.customer?.address || data.customer?.contacts?.phone">
+                  <td *ngIf="data.customer?.address">
+                    <span><span class="label">{{ translate.panel.customer.label.address + ':' }}</span> <span
+                        class="value">{{ data.customer?.address }}</span></span>
+                  </td>
+                  <td *ngIf="data.customer?.contacts?.phone">
+                    <span><span class="label">{{ translate.panel.customer.label.phone + ':' }}</span> <span
+                        class="value">{{ data.customer?.contacts?.phone }}</span></span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="container-member" *ngIf="companyProfile?.registers?.components?.members">
+
+        <h6>
+          <span>{{ translate.panel.member.title }}</span>
+          <button (click)="onOpenLayer('members')" [disabled]="data.code">
+            <icon name="search-outline" pack="eva"></icon>
+          </button>
+        </h6>
+
+        <div class="data" *ngIf="data.member">
+          <div class="container-table table-responsive">
+            <table class="table table-borderless">
+              <tbody>
+                <tr>
+                  <td>
+                    <span><span class="label">{{ translate.panel.member.label.name + ':' }}</span> <span
+                        class="value">{{ data.member.name }}</span></span>
+                  </td>
+                </tr>
+                <tr *ngIf="data.member?.address || data.member?.contacts?.phone">
+                  <td *ngIf="data.member?.address">
+                    <span><span class="label">{{ translate.panel.member.label.address + ':' }}</span> <span
+                        class="value">{{ data.member?.address }}</span></span>
+                  </td>
+                  <td *ngIf="data.member?.contacts?.phone">
+                    <span><span class="label">{{ translate.panel.member.label.phone + ':' }}</span> <span
+                        class="value">{{ data.member?.contacts?.phone }}</span></span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="container-services" *ngIf="data.service?.types?.length > 0">
+
+        <h6>
+          <span>{{ translate.panel.services.title }}</span>
+        </h6>
+
+        <div class="data">
+          <div class="table-responsive">
+            <table class="table table-borderless">
+              <thead>
+                <tr>
+                  <th>{{ translate.panel.services.label.code }}</th>
+                  <th class="text-left">{{ translate.panel.services.label.name }}</th>
+                  <th>{{ translate.panel.services.label.price }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of data.service?.types">
+                  <td class="code">{{ item.code }}</td>
+                  <td class="name">{{ item.name }}</td>
+                  <td class="price">
+                    <input [value]="item.customPrice | currency:''" autocomplete="off"
+                      (input)="onApplyPrice(item, priceField, 'service')" #priceField />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="container-products">
+
+        <h6>
+
+          <span>{{ translate.panel.products.title }}</span>
+
+          <div class="quick-search">
+            <input type="text" [placeholder]="translate.panel.products.quickSearch.placeholder" autocomplete="off"
+              (keydown.enter)="onQuickSearch(inputQuickSearch)" (input)="onApplyNumberMask($event)" #inputQuickSearch />
+            <button (click)="onQuickSearch(inputQuickSearch)">
+              <icon name="search-outline" pack="eva"></icon>
+            </button>
+          </div>
+
+          <button (click)="onOpenLayer('products')">
+            <icon name="funnel-outline" pack="eva"></icon>
+          </button>
+
+        </h6>
+
+        <div class="data">
+
+          <div *ngIf="data.products?.length > 0">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>{{ translate.panel.products.label.code }}</th>
+                    <th class="text-left">{{ translate.panel.products.label.name }}</th>
+                    <th>
+                      Código Interno
+                    </th>
+                    <th>{{ translate.panel.products.label.quantity }}</th>
+                    <th>{{ translate.panel.products.label.price }}</th>
+                    <th>{{ translate.panel.products.label.total }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of data.products; let i = index">
+                    <td class="action">
+                      <button class="btnClose" (click)="onDeleteProductItem(i)">
+                        <icon name="close" pack="eva"></icon>
+                      </button>
+                    </td>
+                    <td class="code">{{ item.code }}</td>
+                    <td class="name">{{ item.name }}</td>
+                    <td class="price">{{ item.internalCode }}</td>
+                    <td class="quantity">
+                      <input [value]="item.selectedItems ?? 1" autocomplete="off"
+                        (input)="onApplyQuantity(item, quantityField)"
+                        (blur)="onApplyQuantityCorretion(item, quantityField)" #quantityField />
+                    </td>
+                    <td class="price">
+                      <input [value]="item.unitaryPrice | currency:''" autocomplete="off"
+                        (input)="onApplyPrice(item, priceField, 'product')" #priceField />
+                    </td>
+                    <td class="total">
+                      <input [value]="(item.unitaryPrice * item.selectedItems) | currency:''" [disabled]="true" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="!data.products || (data.products?.length == 0)" class="placeholder-container">
+            <div class="wrapper">
+              <div class="icon-container">
+                <icon name="shopping-bag-outline" pack="eva"></icon>
+              </div>
+              <button class="btn btn-primary btn-add" (click)="onOpenLayer('products')">Adicionar produtos</button>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="container-components-two">
+
+      <div class="container-payment">
+
+        <h6>
+          <span>{{ translate.panel.paymentMethods.title }}</span>
+          <button (click)="onOpenLayer('paymentMethods')">
+            <icon name="plus-outline" pack="eva"></icon>
+          </button>
+        </h6>
+
+        <div class="data">
+
+          <div *ngIf="data.paymentMethods?.length > 0">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <tbody>
+                  <tr *ngFor="let item of data.paymentMethods; let i = index">
+                    <td>
+                      <div class="container-header">
+                        <span class="name">{{ (item.alternateName || item.name) }}</span>
+                        <button class="btnClose" (click)="onDeletePaymentItem(i)">
+                          <icon name="close" pack="eva"></icon>
+                        </button>
+                      </div>
+
+                      <div class="container-fields">
+                        <div class="primary-line">
+                          <div class="container-value wrapper">
+                            <label>{{ translate.panel.paymentMethods.label.value }}</label>
+                            <input type="text" class="form-control value" placeholder="0,00" autocomplete="off"
+                              [value]="(item.value || 0) | currency:''"
+                              (input)="onPaymentValue(item, paymentValueField)" #paymentValueField />
+                          </div>
+
+                          <div class="container-parcels wrapper"
+                            *ngIf="item.fees && item.code >= 4000 && item.code < 5000">
+                            <label>{{ translate.panel.paymentMethods.label.parcels }}</label>
+                            <select class="form-control" (change)="onPaymentParcel(item, paymentParcelField)"
+                              [value]="(item.parcelChecked ? item.parcelChecked : item.fees[0]?.parcel)"
+                              #paymentParcelField>
+                              <option *ngFor="let item of item.fees" [value]="item.parcel">{{ item.parcel }}</option>
+                            </select>
+                          </div>
+
+                          <div class="container-button">
+                            <button (click)="onTogglePaymentNote(item)">
+                              <icon name="file-text-outline" pack="eva"></icon>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="secundary-line">
+                          <div class="container-note wrapper" *ngIf="item.hasNote">
+                            <label>{{ translate.panel.paymentMethods.label.note }}</label>
+                            <input type="text" class="form-control note" autocomplete="off" [value]="(item.note || '')"
+                              (input)="onPaymentNote(item, paymentNoteField)" #paymentNoteField />
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div *ngIf="!data.paymentMethods || (data.paymentMethods?.length == 0)" class="placeholder-container">
+            <div class="wrapper">
+              <div class="icon-container">
+                <icon name="credit-card-outline" pack="eva"></icon>
+              </div>
+              <button class="btn btn-primary btn-add" (click)="onOpenLayer('paymentMethods')">Adicionar forma de
+                pagamento</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div
+          class="warning received {{ settings.paymentMethods.status == 'ACCEPTED' &&  settings.paymentMethods.pendent == 0 ? 'all-paid' : '' }} {{ settings.paymentMethods.status == 'ACCEPTED' ? 'accepted' : 'refused' }}"
+          *ngIf="data.paymentMethods?.length > 0">
+
+          <span class="received-cont">
+            <span>{{ translate.panel.paymentMethods.label.info.received + ': ' + (settings.paymentMethods.value |
+              currency) }}</span>
+          </span>
+
+          <span> / </span>
+
+          <span
+            class="pendent-cont {{ settings.paymentMethods.status == 'ACCEPTED' && settings.paymentMethods.pendent == 0 ? 'paid' : 'pendent' }}">
+
+            <span class="pe-1">
+              <icon *ngIf="settings.paymentMethods.status == 'ACCEPTED' &&  settings.paymentMethods.pendent == 0"
+                name="checkmark-circle-2-outline"></icon>
+            </span>
+
+            <span *ngIf="settings.paymentMethods.status == 'ACCEPTED' && settings.paymentMethods.pendent > 0">{{
+              translate.panel.paymentMethods.label.info.pendent + ': ' + (settings.paymentMethods.pendent | currency)
+              }}</span>
+            <span *ngIf="settings.paymentMethods.status == 'ACCEPTED' && settings.paymentMethods.pendent == 0">{{
+              translate.panel.paymentMethods.label.info.allPaid }}</span>
+            <span *ngIf="settings.paymentMethods.status == 'REFUSED'">{{
+              translate.panel.paymentMethods.label.info.overplus(settings.paymentMethods.overplus | currency) }}</span>
+
+          </span>
+        </div>
+
+      </div>
+
+      <div class="container-settings">
+
+        <h6>
+          <span>{{ translate.panel.settings.title }}</span>
+        </h6>
+
+        <div class="data">
+
+          <div class="container-options">
+            <div class="options {{ data.dropdown && data.dropdown.balanceOptions ? 'active' : '' }}">
+              <div class="container-fields">
+                <div class="wrapper">
+                  <!-- <label *ngIf="permissions?.sales?.applyTax">Taxa</label>
+                  <div *ngIf="permissions?.sales?.applyTax" class="container-field">
+                    <select (change)="onApplyFee(selectFee, inputFee)" #selectFee>
+                      <option value="$">R$</option>
+                      <option value="%">%</option>
+                    </select>
+                    <input type="text" name="fee" class="form-control input-tax" placeholder="0,00" autocomplete="off" (input)="onApplyFee(selectFee, inputFee)" #inputFee />
+                  </div> -->
+
+                  <label *ngIf="permissions?.sales?.applyDiscount">Desconto</label>
+                  <div *ngIf="permissions?.sales?.applyDiscount" class="container-field">
+                    <select (change)="onApplyDiscount(selectDiscount, inputDiscount)" #selectDiscount>
+                      <option value="$">R$</option>
+                      <option value="%">%</option>
+                    </select>
+                    <input type="text" name="discount" class="form-control input-discount" placeholder="0,00"
+                      autocomplete="off" (input)="onApplyDiscount(selectDiscount, inputDiscount)" #inputDiscount />
+                  </div>
+
+                  <!-- 🆕 CAMPO DE GARANTIA ADICIONADO AQUI -->
+                  <label style="margin-top: 15px;">{{ translate.panel.settings.option.warranty.label }}</label>
+                  <div class="container-field warranty-field">
+                    <icon name="shield-outline" pack="eva" class="warranty-icon"></icon>
+                    <input type="text" name="warranty" class="form-control input-warranty"
+                      [placeholder]="translate.panel.settings.option.warranty.placeholder" [(ngModel)]="data.warranty"
+                      maxlength="100">
+                  </div>
+
+                  <!-- 🆕 BOTÕES DE SUGESTÃO DE GARANTIA (OPCIONAL) -->
+                  <div class="warranty-suggestions">
+                    <button type="button" class="btn-suggestion" (click)="setWarranty('3 meses')">3 meses</button>
+                    <button type="button" class="btn-suggestion" (click)="setWarranty('6 meses')">6 meses</button>
+                    <button type="button" class="btn-suggestion" (click)="setWarranty('1 ano')">1 ano</button>
+                    <button type="button" class="btn-suggestion" (click)="setWarranty('2 anos')">2 anos</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="container-balance">
+        <div class="data">
+          <div class="container-subtotal">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <thead>
+                  <tr>
+                    <th colspan="2">{{ translate.panel.balance.label.subtotal.title }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.products }}</span> <span
+                        class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalProducts || 0) | currency }}</span></td>
+                  </tr>
+                  <tr *ngIf="(data.service?.types?.length > 0) || (data.service?.additional > 0)">
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.services }}</span> <span
+                        class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalServices || 0) | currency }}</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.discount }}</span> <span
+                        class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalDiscount || 0) | currency }}</span></td>
+                  </tr>
+                  <tr>
+                    <td><span class="label">{{ translate.panel.balance.label.subtotal.integrant.fee }}</span> <span
+                        class="line"></span></td>
+                    <td><span class="value">{{ (data.balance?.totalFee || 0) | currency }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="container-total">
+            <div class="table-responsive">
+              <table class="table table-borderless">
+                <tbody>
+                  <tr>
+                    <th>{{ translate.panel.balance.label.total }}</th>
+                    <td>{{ (data.balance?.totalSale || 0) | currency }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="container-button">
+        <button class="btn btn-confirm" (click)="onRegister()"
+          [disabled]="!(!sending && (data.customer || data.member) && (data.service?.code || (data.products?.length > 0)) && (settings.paymentMethods?.status != 'REFUSED'))">{{
+          translate.panel.button.register }}</button>
+      </div>
+
+    </div>
+
+  </div>
+
+  <cashier-pdv-layer (callback)="onLayerResponse($event)"></cashier-pdv-layer>
+
+</div>
