@@ -42,9 +42,16 @@ export class CustomerImportService {
 
     // Configurações de batch e performance
     private readonly BATCH_CONFIG = {
-        batchSize: 100,          // Tamanho do batch para paginação
-        delayBetweenBatches: 100, // Delay entre batches em ms
-        parallelAnalysis: 10      // Análises em paralelo
+        batchSize: 50,           // REDUZIR para melhor performance
+        delayBetweenBatches: 50, // REDUZIR para melhor performance
+        parallelAnalysis: 5,     // REDUZIR para melhor performance
+        maxDocumentsPerCollection: 500 // NOVO limite
+    };
+
+    // ADICIONE AQUI
+    private analysisConfig = {
+        periodMonths: 6,
+        minPurchaseValue: 0
     };
     // Mapa para acesso rápido aos dados brutos de cada cliente
     private customerRawDataMap = new Map<string, any>();
@@ -141,9 +148,15 @@ export class CustomerImportService {
     /**
      * ANALISAR CLIENTES - PONTO DE ENTRADA PRINCIPAL
      */
-    public async analyzeCustomers(): Promise<ICustomerAnalysis[]> {
+    public async analyzeCustomers(config?: any): Promise<ICustomerAnalysis[]> {
         try {
-            console.log('🚀 Iniciando análise inteligente de clientes...');
+            // Guardar configuração se fornecida
+            if (config) {
+                this.analysisConfig = config;
+            }
+
+            console.log('🚀 Iniciando análise inteligente de clientes...', this.analysisConfig);
+
             this.updateProgress('fetching', 0, 0, 'Contando documentos...');
 
             // Contar documentos em cada coleção
@@ -256,14 +269,36 @@ export class CustomerImportService {
         let emptyBatchCount = 0; // Contador de batches vazios
 
         while (hasMore && processedInCollection < totalCount && emptyBatchCount < 3) {
+            // ADICIONAR verificação de limite máximo
+            if (this.BATCH_CONFIG.maxDocumentsPerCollection &&
+                processedInCollection >= this.BATCH_CONFIG.maxDocumentsPerCollection) {
+                console.log(`⚠️ Limite de ${this.BATCH_CONFIG.maxDocumentsPerCollection} documentos atingido para ${collectionName}`);
+                break;
+            }
             try {
-                // Construir query base
+                // Construir query base COM FILTRO DE DATA
+                const whereConditions = [
+                    { field: 'owner', operator: '=', value: Utilities.storeID }
+                ];
+
+                // Adicionar filtro de período se configurado
+                if (this.analysisConfig.periodMonths > 0) {
+                    const startDate = new Date();
+                    startDate.setMonth(startDate.getMonth() - this.analysisConfig.periodMonths);
+
+                    // Tentar múltiplos campos de data
+                    whereConditions.push({
+                        field: 'registerDate', // ou 'paymentDate', 'date', etc
+                        operator: '>=',
+                        value: startDate
+                    });
+                }
+
                 let query = this.iToolsService.database()
                     .collection(collectionName)
                     .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
                     .orderBy({ '_id': 1 })
                     .limit(this.BATCH_CONFIG.batchSize);
-
                 // Se tem último documento, usar startAfter com o ID
                 if (lastDocId) {
                     // Buscar documentos com ID maior que o último processado
@@ -778,6 +813,10 @@ export class CustomerImportService {
         for (const order of orders) {
             // Calcular valor total
             const orderValue = this.extractOrderValue(order);
+            // ADICIONE - Filtrar por valor mínimo
+            if (this.analysisConfig.minPurchaseValue > 0 && orderValue < this.analysisConfig.minPurchaseValue) {
+                continue; // Pular vendas abaixo do valor mínimo
+            }
             totalSpent += orderValue;
 
             // Pegar data da compra

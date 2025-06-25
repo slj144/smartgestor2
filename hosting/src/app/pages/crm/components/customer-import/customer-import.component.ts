@@ -64,6 +64,12 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
     public selectedCustomerRawData: any = null;
     importStartTime: number;
 
+    // Configuração de análise
+    public analysisConfig = {
+        periodMonths: 6, // Padrão: 6 meses
+        minPurchaseValue: 0 // Valor mínimo de compra
+    };
+
     constructor(
         private customerImportService: CustomerImportService,
         private alertService: AlertService,
@@ -158,7 +164,7 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
 
             // Chamar o serviço
             console.log('🔄 CustomerImport: Chamando serviço de análise...');
-            const result = await this.customerImportService.analyzeCustomers();
+            const result = await this.customerImportService.analyzeCustomers(this.analysisConfig);
 
             console.log('✅ CustomerImport: Serviço retornou:', result?.length || 0, 'resultados');
 
