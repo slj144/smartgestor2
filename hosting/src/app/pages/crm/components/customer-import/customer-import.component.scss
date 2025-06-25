@@ -1109,3 +1109,99 @@ tr.selected {
         }
     }
 }
+
+// Stats cards melhorados
+.stats-cards {
+    .stat-card {
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        &.hot-card {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%);
+            color: white;
+        }
+
+        &.warm-card {
+            background: linear-gradient(135deg, #feca57 0%, #ff9ff3 100%);
+            color: white;
+        }
+
+        &.cold-card {
+            background: linear-gradient(135deg, #5f9ea0 0%, #48dbfb 100%);
+            color: white;
+        }
+
+        &.new-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stat-info {
+            position: relative;
+            z-index: 1;
+
+            h4 {
+                font-size: 32px;
+                font-weight: 700;
+                margin: 0;
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            p {
+                font-size: 16px;
+                font-weight: 600;
+                margin: 4px 0;
+                opacity: 0.95;
+            }
+
+            small {
+                font-size: 12px;
+                opacity: 0.8;
+                display: block;
+                margin-top: 4px;
+            }
+        }
+
+        .stat-icon {
+            background: rgba(255, 255, 255, 0.2);
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: $spacing-md;
+            backdrop-filter: blur(10px);
+
+            i {
+                font-size: 32px;
+                color: white;
+            }
+        }
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+}

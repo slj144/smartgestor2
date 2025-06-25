@@ -78,40 +78,47 @@
     <div class="import-content" *ngIf="currentStep === 'selection'">
         <!-- Estatísticas -->
         <div class="stats-cards">
-            <div class="stat-card">
+            <div class="stat-card hot-card">
                 <div class="stat-icon hot">
-                    <i class="eva eva-fire-outline"></i>
+                    <i class="eva eva-flame-outline"></i>
                 </div>
                 <div class="stat-info">
                     <h4>{{ stats.hotCustomers }}</h4>
-                    <p>Clientes Hot</p>
+                    <p>Clientes Quentes</p>
+                    <small>Compraram recentemente</small>
                 </div>
             </div>
-            <div class="stat-card">
+
+            <div class="stat-card warm-card">
                 <div class="stat-icon warm">
-                    <i class="eva eva-sun-outline"></i>
+                    <i class="eva eva-thermometer-outline"></i>
                 </div>
                 <div class="stat-info">
                     <h4>{{ stats.warmCustomers }}</h4>
-                    <p>Clientes Warm</p>
+                    <p>Clientes Mornos</p>
+                    <small>Potencial de reativação</small>
                 </div>
             </div>
-            <div class="stat-card">
+
+            <div class="stat-card cold-card">
                 <div class="stat-icon cold">
-                    <i class="eva eva-snowflake-outline"></i>
+                    <i class="eva eva-snow-outline"></i>
                 </div>
                 <div class="stat-info">
                     <h4>{{ stats.coldCustomers }}</h4>
-                    <p>Clientes Cold</p>
+                    <p>Clientes Frios</p>
+                    <small>Precisam de atenção</small>
                 </div>
             </div>
-            <div class="stat-card">
+
+            <div class="stat-card new-card">
                 <div class="stat-icon new">
-                    <i class="eva eva-person-add-outline"></i>
+                    <i class="eva eva-star-outline"></i>
                 </div>
                 <div class="stat-info">
                     <h4>{{ stats.newCustomers }}</h4>
                     <p>Novos Clientes</p>
+                    <small>Primeira compra</small>
                 </div>
             </div>
         </div>
