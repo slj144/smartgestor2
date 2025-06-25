@@ -50,8 +50,7 @@ export class CustomerImportService {
 
     // ADICIONE AQUI
     private analysisConfig = {
-        periodMonths: 6,
-        minPurchaseValue: 0
+        periodMonths: 6
     };
     // Mapa para acesso rápido aos dados brutos de cada cliente
     private customerRawDataMap = new Map<string, any>();
@@ -923,11 +922,6 @@ export class CustomerImportService {
         for (const order of orders) {
             // Calcular valor total
             const orderValue = this.extractOrderValue(order);
-
-            // IMPORTANTE: Aplicar filtro de valor mínimo corretamente
-            if (this.analysisConfig.minPurchaseValue > 0 && orderValue < this.analysisConfig.minPurchaseValue) {
-                continue; // Pular vendas abaixo do valor mínimo
-            }
 
             totalSpent += orderValue;
             validOrdersCount++; // Contar apenas pedidos válidos

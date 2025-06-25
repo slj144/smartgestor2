@@ -66,8 +66,7 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
 
     // Configuração de análise
     public analysisConfig = {
-        periodMonths: 6, // Padrão: 6 meses
-        minPurchaseValue: 0 // Valor mínimo de compra
+        periodMonths: 6
     };
 
     constructor(

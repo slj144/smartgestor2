@@ -65,18 +65,6 @@
                             <option value="0">Todo o período (mais lento)</option>
                         </select>
                     </div>
-
-                    <div class="config-item">
-                        <label>
-                            <i class="eva eva-pricetags-outline"></i>
-                            Valor mínimo de compra:
-                        </label>
-                        <div class="input-group">
-                            <span class="input-prefix">R$</span>
-                            <input type="number" class="form-control" [(ngModel)]="analysisConfig.minPurchaseValue"
-                                placeholder="0,00" min="0" step="50">
-                        </div>
-                    </div>
                 </div>
                 <button class="btn btn-primary btn-large" (click)="startAnalysis()">
                     <i class="eva eva-search-outline"></i>
