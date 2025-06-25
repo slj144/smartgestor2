@@ -219,6 +219,85 @@ $transition-normal: 0.3s ease;
 }
 
 // ===========================
+// ANALYSIS CONFIG
+// ===========================
+.analysis-config {
+    @include card-style(false);
+    padding: $spacing-lg;
+    margin: $spacing-lg 0;
+    border: 1px solid $border-color;
+    background: $bg-secondary;
+
+    h4 {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        margin-bottom: $spacing-md;
+        color: $text-primary;
+
+        i {
+            color: $primary-color;
+        }
+    }
+
+    .config-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: $spacing-md;
+
+        .config-item {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+
+            label {
+                display: flex;
+                align-items: center;
+                gap: $spacing-xs;
+                font-size: 14px;
+                color: $text-secondary;
+                margin-bottom: $spacing-xs;
+
+                i {
+                    color: $primary-color;
+                }
+            }
+
+            .input-group {
+                display: flex;
+                align-items: center;
+
+                .input-prefix {
+                    padding: 6px 8px;
+                    background: $bg-primary;
+                    border: 1px solid $border-color;
+                    border-right: none;
+                    border-radius: $radius-sm 0 0 $radius-sm;
+                    font-size: 14px;
+                    color: $text-secondary;
+                }
+
+                input {
+                    border: 1px solid $border-color;
+                    border-radius: 0 $radius-sm $radius-sm 0;
+                    padding: 6px 8px;
+                    font-size: 14px;
+
+                    &:focus {
+                        outline: none;
+                        border-color: $primary-color;
+                    }
+                }
+            }
+        }
+    }
+
+    .btn-large {
+        margin-top: $spacing-lg;
+    }
+}
+
+// ===========================
 // PROGRESS SECTIONS
 // ===========================
 .analyzing-section,

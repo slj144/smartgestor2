@@ -245,8 +245,8 @@ export class CustomerImportService {
     }
 
     /**
-     * Processar coleção com paginação usando lastDoc
-     */
+  * Processar coleção com paginação usando lastDoc
+  */
     private async processCollectionWithPagination(
         collectionName: string,
         totalCount: number,
@@ -261,74 +261,103 @@ export class CustomerImportService {
         console.log(`\n📦 Processando ${collectionName} (${totalCount} documentos)...`);
 
         // Mapas para controle de merge
-        const mergeKeysMap = new Map<string, string>(); // chave de merge -> customerId final
+        const mergeKeysMap = new Map<string, string>();
 
         let processedInCollection = 0;
-        let lastDocId = null; // ID do último documento processado
+        let lastDocId = null;
         let hasMore = true;
-        let emptyBatchCount = 0; // Contador de batches vazios
+        let emptyBatchCount = 0;
+        let loopCount = 0; // NOVO: Contador de loops para evitar loop infinito
+        const MAX_LOOPS = 100; // NOVO: Máximo de iterações permitidas
 
-        while (hasMore && processedInCollection < totalCount && emptyBatchCount < 3) {
-            // ADICIONAR verificação de limite máximo
+        // IMPORTANTE: Reduzir batch size para evitar sobrecarga
+        const SAFE_BATCH_SIZE = 20; // Reduzido de 50 para 20
+
+        while (hasMore && processedInCollection < totalCount && emptyBatchCount < 3 && loopCount < MAX_LOOPS) {
+            loopCount++; // Incrementar contador de loops
+
+            // LOG: Mostrar progresso a cada 5 loops
+            if (loopCount % 5 === 0) {
+                console.log(`🔄 Loop ${loopCount}: ${processedInCollection}/${totalCount} documentos processados em ${collectionName}`);
+            }
+
+            // Verificar limite máximo de documentos
             if (this.BATCH_CONFIG.maxDocumentsPerCollection &&
                 processedInCollection >= this.BATCH_CONFIG.maxDocumentsPerCollection) {
-                console.log(`⚠️ Limite de ${this.BATCH_CONFIG.maxDocumentsPerCollection} documentos atingido para ${collectionName}`);
+                console.log(`⚠️ Limite de ${this.BATCH_CONFIG.maxDocumentsPerCollection} documentos atingido`);
                 break;
             }
+
             try {
-                // Construir query base COM FILTRO DE DATA
-                const whereConditions = [
-                    { field: 'owner', operator: '=', value: Utilities.storeID }
-                ];
-
-                // Adicionar filtro de período se configurado
-                if (this.analysisConfig.periodMonths > 0) {
-                    const startDate = new Date();
-                    startDate.setMonth(startDate.getMonth() - this.analysisConfig.periodMonths);
-
-                    // Tentar múltiplos campos de data
-                    whereConditions.push({
-                        field: 'registerDate', // ou 'paymentDate', 'date', etc
-                        operator: '>=',
-                        value: startDate
-                    });
-                }
-
+                // Query base simples
                 let query = this.iToolsService.database()
                     .collection(collectionName)
                     .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
                     .orderBy({ '_id': 1 })
-                    .limit(this.BATCH_CONFIG.batchSize);
-                // Se tem último documento, usar startAfter com o ID
+                    .limit(SAFE_BATCH_SIZE);
+
+                // Se tem último documento, usar para paginação
                 if (lastDocId) {
-                    // Buscar documentos com ID maior que o último processado
-                    query = query.where([
-                        { field: 'owner', operator: '=', value: Utilities.storeID },
-                        { field: '_id', operator: '>', value: lastDocId }
-                    ]);
+                    query = this.iToolsService.database()
+                        .collection(collectionName)
+                        .where([
+                            { field: 'owner', operator: '=', value: Utilities.storeID },
+                            { field: '_id', operator: '>', value: lastDocId }
+                        ])
+                        .orderBy({ '_id': 1 })
+                        .limit(SAFE_BATCH_SIZE);
                 }
 
                 const batch = await query.get();
 
+                // Verificar se o batch é válido
                 if (!batch || !batch.docs || batch.docs.length === 0) {
                     emptyBatchCount++;
+                    console.log(`📭 Batch vazio ${emptyBatchCount}/3 em ${collectionName}`);
+
                     if (emptyBatchCount >= 3) {
-                        console.log(`⚠️ 3 batches vazios consecutivos, finalizando ${collectionName}`);
+                        console.log(`✅ Finalizado ${collectionName} após 3 batches vazios`);
                         hasMore = false;
                     }
+
+                    // IMPORTANTE: Sempre atualizar lastDocId mesmo em batch vazio
+                    // para evitar ficar preso no mesmo ponto
+                    if (lastDocId && emptyBatchCount < 3) {
+                        await this.delay(100); // Pequeno delay antes de tentar novamente
+                    }
+
                     continue;
                 }
 
-                emptyBatchCount = 0; // Reset contador se achou documentos
-                console.log(`📄 Processando batch: ${batch.docs.length} documentos...`);
+                // Reset contador de batches vazios
+                emptyBatchCount = 0;
 
-                // Processar cada documento do batch
+                let batchProcessed = 0; // Contador local do batch
+
+                // Processar documentos do batch
                 for (const doc of batch.docs) {
                     try {
+                        const docData = (doc as any).data();
+
+                        // Aplicar filtro de período se configurado
+                        if (this.analysisConfig.periodMonths > 0) {
+                            const docDate = this.extractDocumentDate(docData, collectionName);
+
+                            if (docDate) {
+                                const startDate = new Date();
+                                startDate.setMonth(startDate.getMonth() - this.analysisConfig.periodMonths);
+
+                                if (docDate < startDate) {
+                                    // Documento muito antigo, pular
+                                    continue;
+                                }
+                            }
+                        }
+
                         const result = processDocument.call(this, doc);
 
                         if (result && result.customerId) {
-                            // Buscar cliente existente
+                            // Processar cliente (código existente)
                             const existingCustomer = this.findExistingCustomer(
                                 result.customerData,
                                 customersMap,
@@ -338,16 +367,11 @@ export class CustomerImportService {
                             let finalCustomerId = result.customerId;
 
                             if (existingCustomer.found) {
-                                // Cliente existe - fazer merge
                                 finalCustomerId = existingCustomer.customerId;
-
                                 const existing = customersMap.get(finalCustomerId);
                                 existing.orders.push(result.orderData);
-
-                                // Atualizar dados se mais completos
                                 this.mergeCustomerData(existing, result.customerData, mergeKeysMap, finalCustomerId);
                             } else {
-                                // Novo cliente
                                 const mergeKeys = this.createMergeKeys(result.customerData);
                                 for (const key of mergeKeys) {
                                     mergeKeysMap.set(key, finalCustomerId);
@@ -359,46 +383,128 @@ export class CustomerImportService {
                                     orders: [result.orderData]
                                 });
                             }
+
+                            batchProcessed++;
                         }
 
                         processedInCollection++;
                         currentProgress++;
 
-                        // Guardar ID do último documento processado
-                        lastDocId = doc.id;
-
                     } catch (error) {
-                        console.error(`❌ Erro ao processar documento ${doc.id}:`, error);
+                        console.error(`❌ Erro ao processar documento:`, error);
                     }
+
+                    // SEMPRE atualizar lastDocId para o último documento processado
+                    lastDocId = doc.id;
                 }
+
+                // Log do batch processado
+                console.log(`✓ Batch processado: ${batchProcessed} clientes válidos de ${batch.docs.length} documentos`);
 
                 // Atualizar progresso
                 this.updateProgress('fetching', currentProgress, totalProgress,
-                    `Processando ${collectionName}: ${processedInCollection}/${totalCount}`);
+                    `${collectionName}: ${processedInCollection} documentos processados`);
 
-                // Se processou menos que o limite, não tem mais
-                if (batch.docs.length < this.BATCH_CONFIG.batchSize) {
+                // Se o batch foi menor que o limite, não há mais documentos
+                if (batch.docs.length < SAFE_BATCH_SIZE) {
+                    console.log(`🏁 Último batch de ${collectionName} (${batch.docs.length} docs)`);
                     hasMore = false;
                 }
 
-                // Delay entre batches
-                await this.delay(this.BATCH_CONFIG.delayBetweenBatches);
+                // Delay entre batches para não sobrecarregar
+                await this.delay(100); // Aumentado para 100ms
 
             } catch (error) {
-                console.error(`❌ Erro ao buscar batch de ${collectionName}:`, error);
+                console.error(`❌ Erro crítico em ${collectionName}:`, error);
                 emptyBatchCount++;
 
-                // Se der erro, tentar continuar do último ID conhecido
-                if (lastDocId) {
-                    await this.delay(1000); // Esperar 1 segundo antes de tentar novamente
+                // Em caso de erro, parar após algumas tentativas
+                if (emptyBatchCount >= 3) {
+                    hasMore = false;
                 } else {
-                    hasMore = false; // Se não tem lastDocId, parar
+                    // Esperar mais tempo antes de tentar novamente
+                    await this.delay(1000);
                 }
             }
         }
 
-        console.log(`✅ ${collectionName} processado: ${processedInCollection} documentos`);
+        // Verificar se saiu por loop infinito
+        if (loopCount >= MAX_LOOPS) {
+            console.error(`⚠️ AVISO: Loop máximo atingido em ${collectionName}! Processados: ${processedInCollection}`);
+        }
+
+        console.log(`✅ ${collectionName} finalizado: ${processedInCollection} documentos processados em ${loopCount} loops`);
         return currentProgress;
+    }
+    /**
+     * Extrair data do documento baseado na coleção
+     * Cada coleção pode ter campos de data diferentes
+     */
+    private extractDocumentDate(docData: any, collectionName: string): Date | null {
+        let dateValue = null;
+
+        // Tentar diferentes campos de data baseado na coleção
+        switch (collectionName) {
+            case 'Sales':
+                // Prioridade: paymentDate > registerDate > date > createdAt
+                dateValue = docData.paymentDate ||
+                    docData.registerDate ||
+                    docData.date ||
+                    docData.createdAt ||
+                    docData.saleDate ||
+                    docData.dataVenda;
+                break;
+
+            case 'CashierSales':
+                // PDV geralmente usa registerDate ou paymentDate
+                dateValue = docData.registerDate ||
+                    docData.paymentDate ||
+                    docData.date ||
+                    docData.createdAt ||
+                    docData.saleDate;
+                break;
+
+            case 'ServiceOrders':
+                // Ordens de serviço podem usar datas diferentes
+                dateValue = docData.finishDate ||
+                    docData.registerDate ||
+                    docData.date ||
+                    docData.createdAt ||
+                    docData.openDate ||
+                    docData.dataAbertura;
+                break;
+
+            case 'Requests':
+                // Pedidos
+                dateValue = docData.registerDate ||
+                    docData.date ||
+                    docData.createdAt ||
+                    docData.requestDate ||
+                    docData.dataPedido;
+                break;
+
+            default:
+                // Tentar campos genéricos
+                dateValue = docData.registerDate ||
+                    docData.date ||
+                    docData.createdAt ||
+                    docData.paymentDate;
+        }
+
+        // Converter para Date se necessário
+        const parsedDate = this.parseDate(dateValue);
+
+        // DEBUG: Log algumas datas para verificar
+        if (docData._id && Math.random() < 0.01) { // Log 1% dos documentos
+            console.log(`📅 Data extraída de ${collectionName}:`, {
+                docId: docData._id,
+                dateValue: dateValue,
+                parsedDate: parsedDate ? parsedDate.toLocaleDateString('pt-BR') : 'null',
+                camposTestados: Object.keys(docData).filter(k => k.toLowerCase().includes('date') || k.toLowerCase().includes('data'))
+            });
+        }
+
+        return parsedDate;
     }
 
     /**
@@ -764,8 +870,8 @@ export class CustomerImportService {
     }
 
     /**
-     * Analisar clientes em paralelo
-     */
+  * Analisar clientes em paralelo
+  */
     private async analyzeCustomersInParallel(customers: any[]): Promise<ICustomerAnalysis[]> {
         const analyses: ICustomerAnalysis[] = [];
         const batchSize = this.BATCH_CONFIG.parallelAnalysis;
@@ -783,8 +889,11 @@ export class CustomerImportService {
 
             const batchResults = await Promise.all(batchPromises);
 
+            // IMPORTANTE: Filtrar resultados nulos (clientes sem pedidos válidos)
             batchResults.forEach(result => {
-                if (result) analyses.push(result);
+                if (result !== null) { // Adicionar verificação de null
+                    analyses.push(result);
+                }
             });
 
             this.updateProgress('analyzing',
@@ -800,8 +909,8 @@ export class CustomerImportService {
     }
 
     /**
-     * Analisar cliente individual
-     */
+ * Analisar cliente individual
+ */
     private async analyzeCustomerFromOrders(customer: any): Promise<ICustomerAnalysis> {
         const orders = customer.orders || [];
 
@@ -809,15 +918,19 @@ export class CustomerImportService {
         let totalSpent = 0;
         let lastPurchaseDate = null;
         const purchaseDates = [];
+        let validOrdersCount = 0; // Contador de pedidos válidos
 
         for (const order of orders) {
             // Calcular valor total
             const orderValue = this.extractOrderValue(order);
-            // ADICIONE - Filtrar por valor mínimo
+
+            // IMPORTANTE: Aplicar filtro de valor mínimo corretamente
             if (this.analysisConfig.minPurchaseValue > 0 && orderValue < this.analysisConfig.minPurchaseValue) {
                 continue; // Pular vendas abaixo do valor mínimo
             }
+
             totalSpent += orderValue;
+            validOrdersCount++; // Contar apenas pedidos válidos
 
             // Pegar data da compra
             const orderDate = this.extractOrderDate(order);
@@ -829,6 +942,11 @@ export class CustomerImportService {
             }
         }
 
+        // Se não tem pedidos válidos após aplicar filtros, retornar null
+        if (validOrdersCount === 0) {
+            return null; // Este cliente será filtrado
+        }
+
         // Calcular dias desde última compra
         const daysSinceLastPurchase = lastPurchaseDate
             ? Math.floor((Date.now() - lastPurchaseDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -837,13 +955,13 @@ export class CustomerImportService {
         // Calcular frequência
         const purchaseFrequency = this.calculatePurchaseFrequency(purchaseDates);
 
-        // Ticket médio
-        const averageTicket = orders.length > 0 ? totalSpent / orders.length : 0;
+        // Ticket médio baseado em pedidos válidos
+        const averageTicket = validOrdersCount > 0 ? totalSpent / validOrdersCount : 0;
 
         // Determinar categoria e score
         const metrics = {
             totalSpent,
-            totalPurchases: orders.length,
+            totalPurchases: validOrdersCount, // Usar contagem de pedidos válidos
             averageTicket,
             daysSinceLastPurchase,
             purchaseFrequency
@@ -859,7 +977,7 @@ export class CustomerImportService {
             email: customer.email || '',
             phone: customer.phone || '',
             totalSpent,
-            totalPurchases: orders.length,
+            totalPurchases: validOrdersCount, // Usar contagem de pedidos válidos
             averageTicket,
             lastPurchaseDate: lastPurchaseDate || new Date(),
             daysSinceLastPurchase,
