@@ -288,8 +288,12 @@ export class CustomerDetailModalComponent implements OnInit {
                 ...order,
                 date: this.extractOrderDate(order),
                 value: this.extractOrderValue(order),
+                products: this.extractProducts(order),
+                services: this.extractServices(order),
+                paymentMethods: this.extractPaymentMethods(order),
+                status: this.extractOrderStatus(order),
                 customerInOrder: order.customer || order.client || order.cliente || {},
-                showDetails: false // Para controlar expansão no UI
+                showDetails: false
             };
 
             return processedOrder;
@@ -552,6 +556,103 @@ export class CustomerDetailModalComponent implements OnInit {
         }
 
         return value;
+    }
+    /**
+        * Extrair produtos da venda em formato padronizado
+        */
+    private extractProducts(order: any): any[] {
+        try {
+            const productsSrc = order.products || order.items || order.itens || [];
+            if (!Array.isArray(productsSrc) || productsSrc.length === 0) {
+                return [];
+            }
+
+            return productsSrc.map((p: any) => {
+                const qty = p.quantity || p.qtd || 1;
+                const name = p.name || p.productName || p.description || (p.product && p.product.name) || 'Produto';
+
+                const total = p.total || p.totalValue || p.value || p.amount || (p.balance && p.balance.total) || 0;
+                let unitPrice = p.unitPrice || p.unitaryPrice || p.price || p.salePrice || 0;
+
+                if (!unitPrice && total && qty) {
+                    unitPrice = total / qty;
+                }
+
+                return {
+                    name,
+                    quantity: qty,
+                    unitPrice,
+                    total: total || unitPrice * qty
+                };
+            });
+        } catch (error) {
+            console.error('Erro ao extrair produtos:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Extrair serviços da venda em formato padronizado
+     */
+    private extractServices(order: any): any[] {
+        try {
+            let services: any[] = [];
+
+            if (order.services && Array.isArray(order.services)) {
+                services = order.services;
+            } else if (order.service && order.service.types && Array.isArray(order.service.types)) {
+                services = order.service.types;
+            }
+
+            return services.map((s: any) => {
+                const qty = s.quantity || 1;
+                const name = s.name || s.serviceName || s.description || 'Serviço';
+                const total = s.total || s.totalValue || s.value || s.amount || 0;
+                return {
+                    name,
+                    quantity: qty,
+                    price: s.price || s.unitPrice || s.unitaryPrice || total / qty,
+                    unitPrice: s.price || s.unitPrice || s.unitaryPrice || total / qty,
+                    total: total || qty * (s.price || 0)
+                };
+            });
+        } catch (error) {
+            console.error('Erro ao extrair serviços:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Extrair formas de pagamento padronizadas
+     */
+    private extractPaymentMethods(order: any): any[] {
+        try {
+            if (order.payments && Array.isArray(order.payments) && order.payments.length > 0) {
+                return order.payments.map((p: any) => ({
+                    name: p.paymentMethod?.name || p.method || p.name || 'Não informado',
+                    value: p.value || p.amount || 0
+                }));
+            }
+
+            if (order.paymentMethods && Array.isArray(order.paymentMethods) && order.paymentMethods.length > 0) {
+                return order.paymentMethods.map((p: any) => ({
+                    name: p.name || p.method || p.type || 'Não informado',
+                    value: p.value || p.amount || 0
+                }));
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Erro ao extrair formas de pagamento:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Extrair status da venda a partir de múltiplos campos
+     */
+    private extractOrderStatus(order: any): string {
+        return order.status || order.statusName || order.saleStatus || order.state || order.situation || (order.canceled ? 'CANCELED' : '');
     }
 
     /**
