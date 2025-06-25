@@ -62,12 +62,6 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
     // Propriedades para o modal de detalhes
     public selectedCustomerForDetails: any = null;
     public selectedCustomerRawData: any = null;
-    importStartTime: number;
-
-    // Configuração de análise
-    public analysisConfig = {
-        periodMonths: 6
-    };
 
     constructor(
         private customerImportService: CustomerImportService,
@@ -163,7 +157,7 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
 
             // Chamar o serviço
             console.log('🔄 CustomerImport: Chamando serviço de análise...');
-            const result = await this.customerImportService.analyzeCustomers(this.analysisConfig);
+            const result = await this.customerImportService.analyzeCustomers();
 
             console.log('✅ CustomerImport: Serviço retornou:', result?.length || 0, 'resultados');
 
@@ -423,67 +417,18 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
     }
 
     /**
- * Formatar data
- */
-    public formatDate(date: Date | string | any): string {
+     * Formatar data
+     */
+    public formatDate(date: Date | string): string {
         if (!date) return 'N/A';
 
-        // Converter string para Date se necessário
-        let dateObj: Date;
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
 
-        if (date instanceof Date) {
-            dateObj = date;
-        } else if (typeof date === 'string') {
-            dateObj = new Date(date);
-        } else if (typeof date === 'number') {
-            dateObj = new Date(date);
-        } else if (date && date.seconds) {
-            // Firebase Timestamp
-            dateObj = new Date(date.seconds * 1000);
-        } else if (date && date.toDate && typeof date.toDate === 'function') {
-            // Firestore Timestamp
-            dateObj = date.toDate();
-        } else {
-            return 'N/A';
-        }
-
-        // Verificar se a data é válida
-        if (isNaN(dateObj.getTime())) {
-            return 'N/A';
-        }
-
-        // Formatar a data
-        try {
-            return new Intl.DateTimeFormat('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            }).format(dateObj);
-        } catch (error) {
-            console.error('Erro ao formatar data:', error);
-            return 'N/A';
-        }
-    }
-
-
-    /**
-       * Calcular tempo decorrido
-       * Usado para mostrar o tempo total da importação
-       */
-    public getElapsedTime(): string {
-        if (!this.importStartTime) return '0 segundos';
-
-        const elapsed = Date.now() - this.importStartTime;
-        const seconds = Math.floor(elapsed / 1000);
-
-        if (seconds < 60) {
-            return `${seconds} segundo${seconds !== 1 ? 's' : ''}`;
-        }
-
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-
-        return `${minutes} minuto${minutes !== 1 ? 's' : ''} e ${remainingSeconds} segundo${remainingSeconds !== 1 ? 's' : ''}`;
+        return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).format(dateObj);
     }
 
     /**

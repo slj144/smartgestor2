@@ -219,85 +219,6 @@ $transition-normal: 0.3s ease;
 }
 
 // ===========================
-// ANALYSIS CONFIG
-// ===========================
-.analysis-config {
-    @include card-style(false);
-    padding: $spacing-lg;
-    margin: $spacing-lg 0;
-    border: 1px solid $border-color;
-    background: $bg-secondary;
-
-    h4 {
-        display: flex;
-        align-items: center;
-        gap: $spacing-sm;
-        margin-bottom: $spacing-md;
-        color: $text-primary;
-
-        i {
-            color: $primary-color;
-        }
-    }
-
-    .config-options {
-        display: flex;
-        flex-wrap: wrap;
-        gap: $spacing-md;
-
-        .config-item {
-            display: flex;
-            flex-direction: column;
-            min-width: 180px;
-
-            label {
-                display: flex;
-                align-items: center;
-                gap: $spacing-xs;
-                font-size: 14px;
-                color: $text-secondary;
-                margin-bottom: $spacing-xs;
-
-                i {
-                    color: $primary-color;
-                }
-            }
-
-            .input-group {
-                display: flex;
-                align-items: center;
-
-                .input-prefix {
-                    padding: 6px 8px;
-                    background: $bg-primary;
-                    border: 1px solid $border-color;
-                    border-right: none;
-                    border-radius: $radius-sm 0 0 $radius-sm;
-                    font-size: 14px;
-                    color: $text-secondary;
-                }
-
-                input {
-                    border: 1px solid $border-color;
-                    border-radius: 0 $radius-sm $radius-sm 0;
-                    padding: 6px 8px;
-                    font-size: 14px;
-
-                    &:focus {
-                        outline: none;
-                        border-color: $primary-color;
-                    }
-                }
-            }
-        }
-    }
-
-    .btn-large {
-        margin-top: $spacing-lg;
-    }
-}
-
-// ===========================
 // PROGRESS SECTIONS
 // ===========================
 .analyzing-section,
@@ -1282,5 +1203,79 @@ tr.selected {
     50% {
         opacity: 0.8;
         transform: scale(1.1);
+    }
+}
+
+// Configuração de análise
+.analysis-config {
+    background: $bg-secondary;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    margin: $spacing-lg 0;
+    border: 1px solid $border-color;
+
+    h4 {
+        margin: 0 0 $spacing-md 0;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        color: $text-primary;
+    }
+
+    .config-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: $spacing-md;
+        margin-bottom: $spacing-md;
+    }
+
+    .config-item {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-sm;
+
+        label {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: $spacing-xs;
+            color: $text-secondary;
+        }
+
+        select,
+        input {
+            padding: $spacing-sm $spacing-md;
+            border: 1px solid $border-color-light;
+            border-radius: $radius-sm;
+            font-size: 14px;
+            background: white;
+
+            &:focus {
+                outline: none;
+                border-color: $primary-color;
+            }
+        }
+    }
+
+    .config-note {
+        display: flex;
+        align-items: flex-start;
+        gap: $spacing-sm;
+        padding: $spacing-sm;
+        background: $bg-primary;
+        border-radius: $radius-sm;
+
+        i {
+            color: $info-color;
+            font-size: 16px;
+            margin-top: 2px;
+        }
+
+        small {
+            color: $text-secondary;
+            line-height: 1.4;
+        }
     }
 }
