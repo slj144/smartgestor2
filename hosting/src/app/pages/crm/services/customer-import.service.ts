@@ -977,7 +977,7 @@ export class CustomerImportService {
     /**
      * NOVO MÉTODO: Extrair data da order com suporte a múltiplos formatos - VERSÃO MELHORADA
      */
-    private extractOrderDate(order: any): Date {
+    private extractOrderDate(order: any): Date | null {
         // Lista expandida de campos de data possíveis (ordem de prioridade)
         const dateFields = [
             'paymentDate',      // CashierSales - data do pagamento (mais recente)
@@ -1007,9 +1007,9 @@ export class CustomerImportService {
             }
         }
 
-        // Se não encontrou nenhuma data válida, usar data atual
+        // Se não encontrou nenhuma data válida, retornar null
         console.warn('⚠️ Nenhuma data válida encontrada no pedido:', order.code || order._docId);
-        return new Date();
+        return null;
     }
 
     /**
@@ -1143,12 +1143,14 @@ export class CustomerImportService {
             // Extrair data
             const orderDate = this.extractOrderDate(order);
 
-            // Atualizar primeira e última data
-            if (!totalStats.firstDate || orderDate < totalStats.firstDate) {
-                totalStats.firstDate = orderDate;
-            }
-            if (!totalStats.lastDate || orderDate > totalStats.lastDate) {
-                totalStats.lastDate = orderDate;
+            if (orderDate) {
+                // Atualizar primeira e última data
+                if (!totalStats.firstDate || orderDate < totalStats.firstDate) {
+                    totalStats.firstDate = orderDate;
+                }
+                if (!totalStats.lastDate || orderDate > totalStats.lastDate) {
+                    totalStats.lastDate = orderDate;
+                }
             }
 
             // Debug a cada 100 orders processadas
@@ -1160,21 +1162,17 @@ export class CustomerImportService {
         // Calcular métricas finais
         const now = new Date();
         const totalSpent = totalStats.total || 0;
-        const firstPurchase = totalStats.firstDate || now;
-        const lastPurchase = totalStats.lastDate || now;
-
+        const firstPurchase = totalStats.firstDate || null;
+        const lastPurchase = totalStats.lastDate || null;
         // Tratamento especial se não encontrou datas válidas
         if (!totalStats.firstDate || !totalStats.lastDate) {
-            console.warn(`⚠️ Cliente ${customer.name} sem datas válidas nas orders. Usando data atual como fallback.`);
-            // Se temos orders, assumir que a última foi há 30 dias
-            if (orders.length > 0) {
-                lastPurchase.setDate(lastPurchase.getDate() - 30);
-                firstPurchase.setDate(firstPurchase.getDate() - 365);
-            }
+            console.warn(`⚠️ Cliente ${customer.name} sem datas válidas nas orders.`);
         }
 
         // Calcular dias desde última compra
-        const daysSinceLastPurchase = Math.floor((now.getTime() - lastPurchase.getTime()) / (1000 * 60 * 60 * 24));
+        const daysSinceLastPurchase = lastPurchase
+            ? Math.floor((now.getTime() - lastPurchase.getTime()) / (1000 * 60 * 60 * 24))
+            : -1;
 
         // Debug final - ESPECIAL PARA LORENA
         if (customer.name && customer.name.includes('LORENA MORAIS')) {
@@ -1196,7 +1194,7 @@ export class CustomerImportService {
         const averageTicket = totalPurchases > 0 ? totalSpent / totalPurchases : 0;
 
         // Frequência mensal
-        const monthsDiff = firstPurchase < now
+        const monthsDiff = firstPurchase && firstPurchase < now
             ? Math.max(1, (now.getTime() - firstPurchase.getTime()) / (1000 * 60 * 60 * 24 * 30))
             : 1;
         const purchaseFrequency = totalPurchases / monthsDiff;
@@ -1225,8 +1223,8 @@ export class CustomerImportService {
             averageTicket,
             purchaseFrequency,
             daysSinceLastPurchase,
-            lastPurchaseDate: lastPurchase,
-            firstPurchaseDate: firstPurchase,
+            lastPurchaseDate: lastPurchase || undefined,
+            firstPurchaseDate: firstPurchase || undefined,
             score,
             category,
             priority: this.calculatePriority(score, category),
