@@ -39,12 +39,15 @@ export interface IImportProgress {
 @Injectable()
 export class CustomerImportService {
 
+
     // Configurações de batch e performance
     private readonly BATCH_CONFIG = {
         batchSize: 100,          // Tamanho do batch para paginação
         delayBetweenBatches: 100, // Delay entre batches em ms
         parallelAnalysis: 10      // Análises em paralelo
     };
+    // Mapa para acesso rápido aos dados brutos de cada cliente
+    private customerRawDataMap = new Map<string, any>();
 
     // Subjects para comunicação
     private analysisResultsSubject = new BehaviorSubject<ICustomerAnalysis[]>([]);
@@ -68,6 +71,14 @@ export class CustomerImportService {
     public resetProgress(): void {
         this.updateProgress('idle', 0, 0, '');
         this.analysisResultsSubject.next([]);
+        this.customerRawDataMap.clear();
+    }
+
+    /**
+     * Obter dados brutos de um cliente analisado
+     */
+    public getCustomerRawData(customerId: string): any {
+        return this.customerRawDataMap.get(customerId) || null;
     }
 
     /**
@@ -189,6 +200,9 @@ export class CustomerImportService {
 
             // Converter mapa em array e analisar
             const customers = Array.from(customersMap.values());
+
+            // Salvar mapa para consultas posteriores no modal de detalhes
+            this.customerRawDataMap = customersMap;
             console.log(`\n👥 Total de clientes únicos encontrados: ${customers.length}`);
 
             if (customers.length === 0) {
