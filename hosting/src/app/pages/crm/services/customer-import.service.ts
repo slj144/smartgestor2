@@ -1,5 +1,7 @@
-// customer-import.service.ts
-// VERSÃO CORRIGIDA COMPLETA - Análise precisa de clientes
+// Arquivo: customer-import.service.ts
+// Caminho: src/app/pages/crm/services/customer-import.service.ts
+// Descrição: Serviço de importação inteligente de clientes com análise RFM
+// VERSÃO CORRIGIDA - Resolve problema de duplicação de clientes
 
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
@@ -57,6 +59,104 @@ export class CustomerImportService {
     }
 
     /**
+     * Debug e verificação de dados duplicados
+     * Adicione esta chamada no início do método analyzeCustomers
+     */
+    private async debugDuplicateIssues(): Promise<void> {
+        console.log('\n🔍 DEBUG - Verificando possíveis duplicatas...\n');
+
+        try {
+            // Buscar algumas vendas para análise
+            const salesSnapshot = await this.iToolsService.database()
+                .collection('CashierSales')
+                .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
+                .limit(100)
+                .get();
+
+            if (salesSnapshot && salesSnapshot.docs) {
+                const customerCodes = new Map<string, Set<string>>(); // nome -> conjunto de códigos
+                const customerIds = new Map<string, Set<string>>(); // nome -> conjunto de IDs
+
+                // Analisar cada venda
+                salesSnapshot.docs.forEach(doc => {
+                    const sale = (doc as any).data();
+                    const customer = sale.customer || {};
+
+                    if (customer.name) {
+                        const normalizedName = this.normalizeCustomerName(customer.name);
+
+                        // Coletar códigos
+                        if (!customerCodes.has(normalizedName)) {
+                            customerCodes.set(normalizedName, new Set());
+                        }
+                        if (customer.code) {
+                            customerCodes.get(normalizedName).add(customer.code.toString());
+                        }
+
+                        // Coletar IDs
+                        if (!customerIds.has(normalizedName)) {
+                            customerIds.set(normalizedName, new Set());
+                        }
+                        if (customer._id) {
+                            customerIds.get(normalizedName).add(customer._id);
+                        }
+                    }
+                });
+
+                // Mostrar clientes com múltiplos códigos ou IDs
+                console.log('📊 Clientes com múltiplos códigos:');
+                let foundIssues = false;
+
+                customerCodes.forEach((codes, name) => {
+                    if (codes.size > 1) {
+                        foundIssues = true;
+                        console.log(`   ⚠️ ${name}:`);
+                        console.log(`      - Códigos encontrados: ${Array.from(codes).join(', ')}`);
+
+                        // Verificar IDs também
+                        if (customerIds.has(name)) {
+                            const ids = customerIds.get(name);
+                            if (ids.size > 1) {
+                                console.log(`      - IDs diferentes: ${ids.size} IDs únicos`);
+                                console.log(`        ${Array.from(ids).join('\n        ')}`);
+                            }
+                        }
+                    }
+                });
+
+                if (!foundIssues) {
+                    console.log('   ✅ Nenhum cliente com múltiplos códigos detectado');
+                }
+
+                // Verificar especificamente a LORENA
+                const lorenaNames = Array.from(customerCodes.keys()).filter(name =>
+                    name.includes('LORENA') && name.includes('MORAIS')
+                );
+
+                if (lorenaNames.length > 0) {
+                    console.log('\n🔴 DEBUG ESPECIAL - LORENA:');
+                    lorenaNames.forEach(name => {
+                        console.log(`   Nome: "${name}"`);
+                        if (customerCodes.has(name)) {
+                            console.log(`   Códigos: ${Array.from(customerCodes.get(name)).join(', ')}`);
+                        }
+                        if (customerIds.has(name)) {
+                            const ids = Array.from(customerIds.get(name));
+                            console.log(`   IDs encontrados: ${ids.length}`);
+                            ids.forEach(id => console.log(`     - ${id}`));
+                        }
+                    });
+                }
+            }
+
+            console.log('\n' + '='.repeat(60) + '\n');
+
+        } catch (error) {
+            console.error('Erro no debug:', error);
+        }
+    }
+
+    /**
      * DEBUG: Buscar vendas específicas de um cliente
      */
     public async debugSpecificCustomer(customerName: string): Promise<void> {
@@ -82,262 +182,322 @@ export class CustomerImportService {
 
                     // Procurar documentos onde o nome do cliente contém a string buscada
                     snapshot.docs.forEach(doc => {
-                        const data = doc.data();
+                        const data = (doc as any).data();
                         const customer = data.customer || data.client || data.cliente || {};
                         const customerDocName = customer.name || customer.nome || '';
 
                         if (customerDocName.toUpperCase().includes(customerName.toUpperCase())) {
                             matchingDocs.push({
                                 id: doc.id,
-                                customerName: customerDocName,
-                                customerId: customer._id || 'sem ID',
-                                customerCode: customer.code || 'sem código',
-                                date: data.registerDate || data.entryDate || data.date || 'sem data',
-                                value: data.balance?.total || data.total || data.value || 0,
-                                status: data.status || data.serviceStatus || 'sem status',
-                                code: data.code || 'sem código venda'
+                                code: data.code,
+                                customer: customer,
+                                value: data.balance?.total || data.total || 0,
+                                date: data.registerDate || data.createdAt
                             });
+                            totalFound++;
                         }
                     });
 
                     if (matchingDocs.length > 0) {
-                        console.log(`✅ Encontrados ${matchingDocs.length} documentos:`);
-                        matchingDocs.forEach((doc, index) => {
-                            console.log(`\n  ${index + 1}. Venda #${doc.code}:`);
-                            console.log(`     - ID Documento: ${doc.id}`);
-                            console.log(`     - Nome Cliente: "${doc.customerName}"`);
-                            console.log(`     - ID Cliente: ${doc.customerId}`);
-                            console.log(`     - Código Cliente: ${doc.customerCode}`);
-                            console.log(`     - Data: ${doc.date}`);
-                            console.log(`     - Valor: R$ ${doc.value}`);
-                            console.log(`     - Status: ${doc.status}`);
+                        console.log(`✅ Encontrados ${matchingDocs.length} documentos em ${collName}:`);
+                        matchingDocs.forEach(doc => {
+                            console.log(`   - Doc ID: ${doc.id}`);
+                            console.log(`     Code: ${doc.code}`);
+                            console.log(`     Customer ID: ${doc.customer._id}`);
+                            console.log(`     Customer Code: ${doc.customer.code}`);
+                            console.log(`     Customer Name: ${doc.customer.name}`);
+                            console.log(`     Value: R$ ${doc.value}`);
+                            console.log(`     Date: ${doc.date}`);
+                            console.log('');
                         });
-                        totalFound += matchingDocs.length;
                     } else {
-                        console.log(`❌ Nenhum documento encontrado`);
+                        console.log(`❌ Nenhum documento encontrado em ${collName}`);
                     }
                 }
             }
 
-            console.log(`\n📊 RESUMO: Total de ${totalFound} vendas encontradas para clientes com nome contendo "${customerName}"`);
+            console.log(`\n📊 TOTAL GERAL: ${totalFound} documentos encontrados para "${customerName}"`);
 
         } catch (error) {
-            console.error('❌ Erro no debug:', error);
+            console.error('Erro no debug específico:', error);
         }
     }
 
     /**
-     * MÉTODO PRINCIPAL - Análise otimizada
+     * Contar documentos em todas as collections
      */
-    public async analyzeCustomers(): Promise<ICustomerAnalysis[]> {
+    private async countAllDocuments(): Promise<{ sales: number, cashier: number, orders: number, requests: number }> {
+        const counts = { sales: 0, cashier: 0, orders: 0, requests: 0 };
+
         try {
-            console.log('🚀 INICIANDO ANÁLISE OTIMIZADA DE CLIENTES...');
-
-            // Resetar resultados
-            this.analysisResultsSubject.next([]);
-            this.updateProgress('fetching', 0, 0, 'Contando clientes...');
-
-            // 1️⃣ CONTAR DOCUMENTOS
-            const totalCounts = await this.countAllDocuments();
-            const totalDocuments = totalCounts.sales + totalCounts.cashier + totalCounts.orders + totalCounts.requests;
-
-            console.log(`📊 Total de documentos para processar: ${totalDocuments}`);
-            console.log(`   - Vendas (Sales): ${totalCounts.sales}`);
-            console.log(`   - PDV (CashierSales): ${totalCounts.cashier}`);
-            console.log(`   - OS (ServiceOrders): ${totalCounts.orders}`);
-            console.log(`   - Pedidos (Requests): ${totalCounts.requests}`);
-
-            if (totalDocuments === 0) {
-                this.updateProgress('completed', 0, 0, 'Nenhum cliente encontrado');
-                return [];
-            }
-
-            // 2️⃣ BUSCAR E PROCESSAR COM PAGINAÇÃO
-            this.updateProgress('fetching', 0, totalDocuments, 'Buscando dados...');
-
-            const allCustomersMap = new Map();
-            let processedCount = 0;
-
-            // Processar cada coleção com paginação
-            processedCount = await this.processBatchCollectionPaginated(
-                'Sales',
-                totalCounts.sales,
-                allCustomersMap,
-                processedCount,
-                totalDocuments,
-                this.processSaleDocument
-            );
-
-            processedCount = await this.processBatchCollectionPaginated(
-                'CashierSales',
-                totalCounts.cashier,
-                allCustomersMap,
-                processedCount,
-                totalDocuments,
-                this.processCashierSaleDocument
-            );
-
-            processedCount = await this.processBatchCollectionPaginated(
-                'ServiceOrders',
-                totalCounts.orders,
-                allCustomersMap,
-                processedCount,
-                totalDocuments,
-                this.processServiceOrderDocument
-            );
-
-            processedCount = await this.processBatchCollectionPaginated(
-                'Requests',
-                totalCounts.requests,
-                allCustomersMap,
-                processedCount,
-                totalDocuments,
-                this.processRequestDocument
-            );
-
-            // 3️⃣ ANALISAR CLIENTES
-            const customers = Array.from(allCustomersMap.values());
-            console.log(`\n👥 Total de clientes únicos: ${customers.length}`);
-
-            this.updateProgress('analyzing', 0, customers.length, 'Analisando clientes...');
-
-            const analyses = await this.analyzeCustomersInParallel(customers);
-
-            // Ordenar por score
-            analyses.sort((a, b) => b.score - a.score);
-
-            this.analysisResultsSubject.next(analyses);
-            this.updateProgress('completed', customers.length, customers.length, 'Análise concluída!');
-
-            return analyses;
-
-        } catch (error) {
-            console.error('❌ Erro na análise:', error);
-            this.updateProgress('error', 0, 0, 'Erro ao analisar clientes');
-            throw error;
-        }
-    }
-
-    /**
-     * Contar documentos de cada coleção
-     */
-    private async countAllDocuments() {
-        const counts = {
-            sales: 0,
-            cashier: 0,
-            orders: 0,
-            requests: 0
-        };
-
-        // Contar Sales
-        try {
-            const snapshot = await this.iToolsService.database()
+            // Contar Sales - usando limit 1 para verificar se existe
+            const salesSnapshot = await this.iToolsService.database()
                 .collection('Sales')
                 .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
+                .limit(1000)
                 .get();
-            counts.sales = snapshot.docs?.length || 0;
-        } catch (e) {
-            console.log('⚠️ Erro ao contar Sales:', e);
-        }
+            counts.sales = salesSnapshot?.docs?.length || 0;
 
-        // Contar CashierSales
-        try {
-            const snapshot = await this.iToolsService.database()
+            // Contar CashierSales
+            const cashierSnapshot = await this.iToolsService.database()
                 .collection('CashierSales')
                 .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
+                .limit(1000)
                 .get();
-            counts.cashier = snapshot.docs?.length || 0;
-        } catch (e) {
-            console.log('⚠️ Erro ao contar CashierSales:', e);
-        }
+            counts.cashier = cashierSnapshot?.docs?.length || 0;
 
-        // Contar ServiceOrders
-        try {
-            const snapshot = await this.iToolsService.database()
+            // Contar ServiceOrders
+            const ordersSnapshot = await this.iToolsService.database()
                 .collection('ServiceOrders')
                 .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
+                .limit(1000)
                 .get();
-            counts.orders = snapshot.docs?.length || 0;
-        } catch (e) {
-            console.log('⚠️ Erro ao contar ServiceOrders:', e);
-        }
+            counts.orders = ordersSnapshot?.docs?.length || 0;
 
-        // Contar Requests
-        try {
-            const snapshot = await this.iToolsService.database()
+            // Contar Requests
+            const requestsSnapshot = await this.iToolsService.database()
                 .collection('Requests')
                 .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
+                .limit(1000)
                 .get();
-            counts.requests = snapshot.docs?.length || 0;
-        } catch (e) {
-            console.log('⚠️ Erro ao contar Requests:', e);
+            counts.requests = requestsSnapshot?.docs?.length || 0;
+
+            // Se alguma coleção tem 1000 documentos, fazer contagem mais precisa
+            if (counts.sales === 1000) {
+                console.log('⚠️ Sales tem 1000+ documentos, usando estimativa');
+                counts.sales = 1000; // Usar como estimativa mínima
+            }
+            if (counts.cashier === 1000) {
+                console.log('⚠️ CashierSales tem 1000+ documentos, usando estimativa');
+                counts.cashier = 1000;
+            }
+            if (counts.orders === 1000) {
+                console.log('⚠️ ServiceOrders tem 1000+ documentos, usando estimativa');
+                counts.orders = 1000;
+            }
+            if (counts.requests === 1000) {
+                console.log('⚠️ Requests tem 1000+ documentos, usando estimativa');
+                counts.requests = 1000;
+            }
+
+        } catch (error) {
+            console.error('Erro ao contar documentos:', error);
         }
 
         return counts;
     }
 
     /**
-     * Normalizar nome do cliente para evitar duplicatas
+     * Normalizar nome do cliente - Remove variações
      */
     private normalizeCustomerName(name: string): string {
         if (!name) return '';
 
-        return name
+        const original = name;
+        const normalized = name
             .toUpperCase()
-            .trim()
-            .replace(/\s+/g, ' ') // Múltiplos espaços para um
-            .replace(/[^\w\s]/g, '') // Remove caracteres especiais
-            .replace(/\b(LTDA|ME|EPP|EIRELI|SA|S\/A)\b/g, '') // Remove tipos de empresa
+            .replace(/\s+/g, ' ') // Múltiplos espaços -> um espaço
+            .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '') // Remove pontuação
+            .replace(/\b(LTDA|ME|EPP|EIRELI|SA|S\/A|CIA|COMPANHIA)\b/g, '') // Remove tipos de empresa
             .trim();
+
+        // DEBUG para LORENA
+        if (name.includes('LORENA MORAIS')) {
+            console.log(`📝 Normalização de nome:`);
+            console.log(`   - Original: "${original}"`);
+            console.log(`   - Normalizado: "${normalized}"`);
+        }
+
+        return normalized;
     }
 
     /**
-     * Gerar ID único para cliente baseado em múltiplos campos - VERSÃO MELHORADA
+     * Gerar ID único para cliente baseado em múltiplos campos - VERSÃO DEFINITIVA
+     * CORREÇÃO: Não usar código do cliente no ID pois pode variar entre vendas
      */
     private generateCustomerId(customerData: any, docId: string): string {
-        // PRIORIDADE ABSOLUTA: usar o _id do cliente se existir
-        if (customerData._id) {
+        // DEBUG PARA LORENA
+        if (customerData.name && customerData.name.includes('LORENA')) {
+            console.log(`\n🔴 generateCustomerId para ${customerData.name}:`);
+            console.log(`   - _id MongoDB: ${customerData._id}`);
+            console.log(`   - code: ${customerData.code} ⚠️ (NÃO SERÁ USADO NO ID)`);
+            console.log(`   - cpfCnpj: ${customerData.cpfCnpj}`);
+            console.log(`   - phone: ${customerData.phone}`);
+            console.log(`   - email: ${customerData.email}`);
+        }
+
+        // PRIORIDADE 1: usar o _id do MongoDB se existir e for válido
+        // (24 caracteres hexadecimais = ID do MongoDB)
+        if (customerData._id && typeof customerData._id === 'string' && customerData._id.length >= 20) {
+            if (customerData.name && customerData.name.includes('LORENA')) {
+                console.log(`   ✅ Usando _id MongoDB original: ${customerData._id}`);
+            }
             return customerData._id;
         }
 
-        // Segunda prioridade: CPF/CNPJ (mais confiável que nome)
-        if (customerData.cpfCnpj) {
-            const cpf = customerData.cpfCnpj.replace(/\D/g, '');
-            if (cpf.length >= 11) return `cpf_${cpf}`;
-        }
-        if (customerData.cpf) {
-            const cpf = customerData.cpf.replace(/\D/g, '');
-            if (cpf.length >= 11) return `cpf_${cpf}`;
-        }
-        if (customerData.cnpj) {
-            const cnpj = customerData.cnpj.replace(/\D/g, '');
-            if (cnpj.length >= 14) return `cnpj_${cnpj}`;
-        }
-
-        // Terceira prioridade: telefone (também único)
-        if (customerData.phone || customerData.telefone) {
-            const phone = (customerData.phone || customerData.telefone).replace(/\D/g, '');
-            if (phone.length >= 10) return `tel_${phone}`;
+        // PRIORIDADE 2: CPF/CNPJ (documento único por pessoa - mais confiável)
+        // Verificar todos os campos possíveis de CPF/CNPJ
+        const cpfCnpj = customerData.cpfCnpj || customerData.cpf || customerData.cnpj ||
+            customerData.documento || customerData.document || '';
+        if (cpfCnpj) {
+            const cleanDoc = cpfCnpj.replace(/\D/g, ''); // Remove tudo que não é número
+            if (cleanDoc.length >= 11) { // CPF tem 11 dígitos, CNPJ tem 14
+                const id = cleanDoc.length === 11 ? `cpf_${cleanDoc}` : `cnpj_${cleanDoc}`;
+                if (customerData.name && customerData.name.includes('LORENA')) {
+                    console.log(`   ✅ Usando CPF/CNPJ: ${id}`);
+                }
+                return id;
+            }
         }
 
-        // IMPORTANTE: Se tem código do cliente, usar ele com o nome
-        if (customerData.code && customerData.name) {
-            const normalizedName = this.normalizeCustomerName(customerData.name);
-            return `code_${customerData.code}_${normalizedName.replace(/\s/g, '_')}`;
+        // PRIORIDADE 3: Email (único por pessoa)
+        const email = (customerData.email || '').toLowerCase().trim();
+        if (email && email.includes('@') && email.length > 5) {
+            // Email válido - usar como ID
+            const emailId = `email_${email.replace(/[^a-z0-9@._-]/g, '')}`;
+            if (customerData.name && customerData.name.includes('LORENA')) {
+                console.log(`   ✅ Usando email: ${emailId}`);
+            }
+            return emailId;
         }
 
-        // Última opção: usar nome normalizado
+        // PRIORIDADE 4: Telefone (geralmente único por pessoa)
+        const phone = (customerData.phone || customerData.telefone || customerData.cellphone ||
+            customerData.celular || customerData.mobile || '').replace(/\D/g, '');
+        if (phone.length >= 10) { // Telefone válido tem pelo menos 10 dígitos
+            const id = `tel_${phone}`;
+            if (customerData.name && customerData.name.includes('LORENA')) {
+                console.log(`   ✅ Usando telefone: ${id}`);
+            }
+            return id;
+        }
+
+        // PRIORIDADE 5: WhatsApp (se diferente do telefone)
+        const whatsapp = (customerData.whatsapp || customerData.whatsApp || '').replace(/\D/g, '');
+        if (whatsapp.length >= 10 && whatsapp !== phone) {
+            const id = `whats_${whatsapp}`;
+            if (customerData.name && customerData.name.includes('LORENA')) {
+                console.log(`   ✅ Usando WhatsApp: ${id}`);
+            }
+            return id;
+        }
+
+        // ATENÇÃO: NÃO USAR CÓDIGO DO CLIENTE NO ID!
+        // O código pode mudar entre vendas para a mesma pessoa
+        // Isso estava causando o bug da LORENA ter múltiplos IDs
+
+        // ÚLTIMA OPÇÃO: Nome completo normalizado
+        // Use com cuidado - pessoas diferentes podem ter o mesmo nome!
         const normalizedName = this.normalizeCustomerName(customerData.name || customerData.nome || '');
-        if (normalizedName) {
-            // IMPORTANTE: incluir mais informações para evitar colisões
-            const nameParts = normalizedName.split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts[nameParts.length - 1] || '';
-            return `nome_${firstName}_${lastName}_${docId.substr(-6)}`;
+        if (normalizedName && normalizedName.length > 3) {
+            // Criar hash do nome para evitar IDs muito longos
+            const nameHash = this.createSimpleHash(normalizedName);
+            const id = `nome_${nameHash}`;
+
+            if (customerData.name && customerData.name.includes('LORENA')) {
+                console.log(`   ⚠️ Usando nome normalizado (menos confiável): ${id}`);
+                console.log(`   ⚠️ Nome normalizado: "${normalizedName}"`);
+                console.log(`   ⚠️ AVISO: Pessoas com mesmo nome terão o mesmo ID!`);
+            }
+            return id;
         }
 
-        // Fallback absoluto
-        return `doc_${docId}`;
+        // FALLBACK: Se não tem nenhuma informação útil
+        // Usar timestamp + random para garantir unicidade
+        const timestamp = Date.now();
+        const random = Math.random().toString(36).substr(2, 5);
+        const id = `temp_${timestamp}_${random}`;
+
+        if (customerData.name && customerData.name.includes('LORENA')) {
+            console.log(`   ❌ Sem dados suficientes - usando ID temporário: ${id}`);
+        }
+        return id;
+    }
+
+    /**
+     * Criar hash simples de uma string (para IDs baseados em nome)
+     * Isso garante IDs consistentes e de tamanho fixo
+     */
+    private createSimpleHash(str: string): string {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Converter para 32bit integer
+        }
+        // Converter para string hexadecimal positiva
+        return Math.abs(hash).toString(36);
+    }
+
+    /**
+     * Criar chave de merge baseada em múltiplos campos
+     * Isso ajuda a identificar o mesmo cliente mesmo com dados ligeiramente diferentes
+     */
+    private createMergeKey(customerData: any): string[] {
+        const keys = [];
+
+        // Normalizar nome para comparação
+        const normalizedName = this.normalizeCustomerName(customerData.name || '');
+
+        // CPF/CNPJ
+        const cpf = (customerData.cpfCnpj || customerData.cpf || customerData.cnpj || '').replace(/\D/g, '');
+        if (cpf.length >= 11) {
+            keys.push(`cpf:${cpf}`);
+        }
+
+        // Email
+        const email = (customerData.email || '').toLowerCase().trim();
+        if (email && email.includes('@')) {
+            keys.push(`email:${email}`);
+        }
+
+        // Telefone
+        const phone = (customerData.phone || customerData.telefone || '').replace(/\D/g, '');
+        if (phone.length >= 10) {
+            keys.push(`phone:${phone}`);
+        }
+
+        // Nome + Data de nascimento (se existir)
+        if (normalizedName && customerData.birthDate) {
+            keys.push(`name_birth:${normalizedName}_${customerData.birthDate}`);
+        }
+
+        // Só nome (menos confiável, mas ainda útil)
+        if (normalizedName) {
+            keys.push(`name:${normalizedName}`);
+        }
+
+        return keys;
+    }
+
+    /**
+     * Encontrar cliente existente usando múltiplas chaves de merge
+     */
+    private findExistingCustomer(
+        customerData: any,
+        customersMap: Map<string, any>,
+        mergeKeysMap: Map<string, string>
+    ): { found: boolean; customerId: string; mergeKey: string } {
+
+        const mergeKeys = this.createMergeKey(customerData);
+
+        // Tentar encontrar por cada chave, em ordem de confiabilidade
+        for (const key of mergeKeys) {
+            if (mergeKeysMap.has(key)) {
+                const existingId = mergeKeysMap.get(key);
+
+                // Verificar se ainda existe no mapa principal
+                if (customersMap.has(existingId)) {
+                    // DEBUG para LORENA
+                    if (customerData.name && customerData.name.includes('LORENA')) {
+                        console.log(`   🔄 Cliente encontrado por ${key.split(':')[0]}`);
+                    }
+                    return { found: true, customerId: existingId, mergeKey: key };
+                }
+            }
+        }
+
+        return { found: false, customerId: '', mergeKey: '' };
     }
 
     /**
@@ -356,10 +516,8 @@ export class CustomerImportService {
 
         console.log(`\n📦 Processando ${collectionName} (${totalCount} documentos)...`);
 
-        // Mapas para evitar duplicações
-        const customersByName = new Map<string, string>(); // normalizedName -> customerId
-        const customersByPhone = new Map<string, string>(); // phone -> customerId
-        const customersByCpf = new Map<string, string>(); // cpf -> customerId
+        // Criar mapa de chaves de merge
+        const mergeKeysMap = new Map<string, string>(); // chave de merge -> customerId
 
         let processedInCollection = 0;
         let currentPage = 0;
@@ -390,80 +548,101 @@ export class CustomerImportService {
                         const result = processDocument.call(this, doc);
 
                         if (result && result.customerId) {
-                            const normalizedName = result.customerData.normalizedName;
-                            const phone = result.customerData.phone?.replace(/\D/g, '');
-                            const cpf = result.customerData.cpfCnpj?.replace(/\D/g, '');
+                            // DEBUG para LORENA
+                            if (result.customerData.name && result.customerData.name.includes('LORENA')) {
+                                console.log(`\n🔍 Processando ${result.customerData.name}:`);
+                                console.log(`   - Documento: ${doc.id}`);
+                                console.log(`   - Coleção: ${collectionName}`);
+                                console.log(`   - Código do cliente: ${result.customerData.code}`);
+                                console.log(`   - ID gerado: ${result.customerId}`);
+                            }
 
-                            // Determinar o ID final do cliente (evitar duplicatas)
+                            // Tentar encontrar cliente existente usando múltiplas estratégias
+                            const existingCustomer = this.findExistingCustomer(
+                                result.customerData,
+                                customersMap,
+                                mergeKeysMap
+                            );
+
                             let finalCustomerId = result.customerId;
-                            let merged = false;
+                            let isNewCustomer = true;
 
-                            // PRIORIDADE 1: Se tem _id original do MongoDB, usar ele
-                            if (result.customerData._id && result.customerData._id.length === 24) {
-                                finalCustomerId = result.customerData._id;
-                            }
-                            // PRIORIDADE 2: Verificar por CPF
-                            else if (cpf && cpf.length >= 11 && customersByCpf.has(cpf)) {
-                                finalCustomerId = customersByCpf.get(cpf);
-                                merged = true;
-                                console.log(`🔄 Merge por CPF: "${result.customerData.name}" → Cliente existente`);
-                            }
-                            // PRIORIDADE 3: Verificar por telefone
-                            else if (phone && phone.length >= 10 && customersByPhone.has(phone)) {
-                                finalCustomerId = customersByPhone.get(phone);
-                                merged = true;
-                                console.log(`🔄 Merge por telefone: "${result.customerData.name}" → Cliente existente`);
-                            }
-                            // PRIORIDADE 4: Verificar por nome (só se muito similar)
-                            else if (normalizedName && customersByName.has(normalizedName)) {
-                                // Só fazer merge por nome se for exatamente igual
-                                finalCustomerId = customersByName.get(normalizedName);
-                                merged = true;
-                                console.log(`🔄 Merge por nome: "${result.customerData.name}" → Cliente existente`);
-                            }
+                            if (existingCustomer.found) {
+                                // Cliente encontrado - fazer merge
+                                finalCustomerId = existingCustomer.customerId;
+                                isNewCustomer = false;
 
-                            // Registrar nos mapas de controle
-                            if (!merged) {
-                                if (normalizedName) customersByName.set(normalizedName, finalCustomerId);
-                                if (phone && phone.length >= 10) customersByPhone.set(phone, finalCustomerId);
-                                if (cpf && cpf.length >= 11) customersByCpf.set(cpf, finalCustomerId);
+                                if (result.customerData.name && result.customerData.name.includes('LORENA')) {
+                                    console.log(`   ✅ MERGE realizado! Usando ID existente: ${finalCustomerId}`);
+                                }
+                            } else {
+                                // Novo cliente - registrar todas as chaves de merge
+                                const mergeKeys = this.createMergeKey(result.customerData);
+                                for (const key of mergeKeys) {
+                                    mergeKeysMap.set(key, finalCustomerId);
+                                }
+
+                                if (result.customerData.name && result.customerData.name.includes('LORENA')) {
+                                    console.log(`   🆕 Novo cliente registrado com ID: ${finalCustomerId}`);
+                                    console.log(`   📝 Chaves de merge registradas:`, mergeKeys);
+                                }
                             }
 
                             // Adicionar ou atualizar cliente
                             if (customersMap.has(finalCustomerId)) {
+                                // Cliente existe - adicionar pedido
                                 const existing = customersMap.get(finalCustomerId);
                                 existing.orders.push(result.orderData);
 
-                                // Atualizar dados do cliente se estiverem mais completos
+                                // Mesclar dados (manter os mais completos)
                                 if (!existing.email && result.customerData.email) {
                                     existing.email = result.customerData.email;
+                                    // Registrar nova chave de email
+                                    const emailKey = `email:${result.customerData.email.toLowerCase().trim()}`;
+                                    mergeKeysMap.set(emailKey, finalCustomerId);
                                 }
                                 if (!existing.phone && result.customerData.phone) {
                                     existing.phone = result.customerData.phone;
+                                    // Registrar nova chave de telefone
+                                    const phone = result.customerData.phone.replace(/\D/g, '');
+                                    if (phone.length >= 10) {
+                                        mergeKeysMap.set(`phone:${phone}`, finalCustomerId);
+                                    }
                                 }
                                 if (!existing.cpfCnpj && result.customerData.cpfCnpj) {
                                     existing.cpfCnpj = result.customerData.cpfCnpj;
-                                }
-                                if (!existing._id && result.customerData._id) {
-                                    existing._id = result.customerData._id;
+                                    // Registrar nova chave de CPF
+                                    const cpf = result.customerData.cpfCnpj.replace(/\D/g, '');
+                                    if (cpf.length >= 11) {
+                                        mergeKeysMap.set(`cpf:${cpf}`, finalCustomerId);
+                                    }
                                 }
 
-                                // Limitar orders na memória se necessário
-                                if (existing.orders.length > this.BATCH_CONFIG.maxMemoryItems) {
-                                    existing.orders = existing.orders
-                                        .sort((a, b) => {
-                                            const dateA = this.extractOrderDate(a).getTime();
-                                            const dateB = this.extractOrderDate(b).getTime();
-                                            return dateB - dateA;
-                                        })
-                                        .slice(0, this.BATCH_CONFIG.maxMemoryItems);
+                                // Atualizar outros campos se necessário
+                                if (!existing.birthDate && result.customerData.birthDate) {
+                                    existing.birthDate = result.customerData.birthDate;
+                                }
+
+                                // Se o código mudou, manter o mais recente
+                                if (result.customerData.code) {
+                                    existing.code = result.customerData.code;
+                                }
+
+                                // DEBUG - mostrar total de pedidos
+                                if (result.customerData.name && result.customerData.name.includes('LORENA')) {
+                                    console.log(`   📊 Total de pedidos acumulados: ${existing.orders.length}`);
                                 }
                             } else {
+                                // Criar novo cliente
                                 result.customerData._id = finalCustomerId;
                                 customersMap.set(finalCustomerId, {
                                     ...result.customerData,
                                     orders: [result.orderData]
                                 });
+
+                                if (result.customerData.name && result.customerData.name.includes('LORENA')) {
+                                    console.log(`   ✅ Cliente adicionado ao mapa`);
+                                }
                             }
                         }
 
@@ -471,7 +650,8 @@ export class CustomerImportService {
                         currentProgress++;
 
                     } catch (error) {
-                        console.error(`Erro ao processar documento:`, error);
+                        console.error(`❌ Erro ao processar documento ${doc.id}:`, error);
+                        // Continuar processando outros documentos
                     }
                 }
 
@@ -619,7 +799,7 @@ export class CustomerImportService {
      * Processar documento de venda
      */
     private processSaleDocument(doc: any): any {
-        const sale = doc.data();
+        const sale = (doc as any).data();
 
         const customerData = sale.customer || sale.client || sale.cliente || {};
 
@@ -653,10 +833,10 @@ export class CustomerImportService {
     }
 
     /**
-     * Processar documento de venda PDV - CORRIGIDO PARA ESTRUTURA REAL
+     * Processar documento de venda PDV - CORRIGIDO COM DEBUG DETALHADO
      */
     private processCashierSaleDocument(doc: any): any {
-        const sale = doc.data();
+        const sale = (doc as any).data();
 
         // No sistema real, customer é um objeto completo
         const customerData = sale.customer || {};
@@ -666,8 +846,25 @@ export class CustomerImportService {
             return null;
         }
 
-        // Usar o ID do cliente se existir, senão gerar um baseado em outros dados
-        const customerId = customerData._id || this.generateCustomerId(customerData, doc.id);
+        // Gerar o ID do cliente
+        const generatedId = this.generateCustomerId(customerData, doc.id);
+        const customerId = customerData._id || generatedId;
+
+        // DEBUG: Para LORENA, mostrar detalhes
+        if (customerData.name && customerData.name.includes('LORENA MORAIS')) {
+            console.log(`\n🔍 DEBUG ProcessCashierSale - LORENA:`);
+            console.log(`   - Doc ID: ${doc.id}`);
+            console.log(`   - Sale Code: ${sale.code}`);
+            console.log(`   - Customer Name: "${customerData.name}"`);
+            console.log(`   - Customer._id: ${customerData._id}`);
+            console.log(`   - Customer Code: ${customerData.code}`);
+            console.log(`   - Phone: ${customerData.phone}`);
+            console.log(`   - Generated ID: ${generatedId}`);
+            console.log(`   - Final Customer ID: ${customerId}`);
+            console.log(`   - RegisterDate: ${sale.registerDate}`);
+            console.log(`   - PaymentDate: ${sale.paymentDate}`);
+            console.log(`   - Value: ${sale.balance?.total}`);
+        }
 
         return {
             customerId: customerId,
@@ -695,7 +892,7 @@ export class CustomerImportService {
      * Processar documento de ordem de serviço - CORRIGIDO PARA ESTRUTURA REAL
      */
     private processServiceOrderDocument(doc: any): any {
-        const order = doc.data();
+        const order = (doc as any).data();
 
         // No sistema real, customer é um objeto completo com todos os dados
         const customerData = order.customer || {};
@@ -735,7 +932,7 @@ export class CustomerImportService {
      * Processar documento de pedido
      */
     private processRequestDocument(doc: any): any {
-        const order = doc.data();
+        const order = (doc as any).data();
 
         // Tentar múltiplas formas de pegar cliente
         const customerData = order.customer ||
@@ -791,156 +988,89 @@ export class CustomerImportService {
             'created',         // Variação
             'dataVenda',       // Português
             'saleDate',        // Inglês
-            'orderDate',       // Específico de pedido
-            'data',            // Português simples
-            'entryDate',       // ServiceOrders - data de entrada
-            'deliveryDate',    // ServiceOrders - data de entrega
-            'fechamento',      // Data de fechamento
-            'emissao',         // Data de emissão
-            'dataEmissao',     // Variação
-            'dataCriacao',     // Variação português
-            'updatedAt',       // Padrão atualização
-            'timestamp',       // Pode ser timestamp
-            '_createdAt',      // Com underscore
-            '_timestamp'       // Com underscore
+            'orderDate',       // Pedidos
+            'entryDate',       // Ordens de serviço
+            'data',           // Genérico português
+            'timestamp'       // Timestamp
         ];
 
-        // DEBUG: para 10% das orders, mostrar quais campos de data existem
-        if (Math.random() < 0.1) {
-            console.log(`\n📅 DEBUG extractOrderDate - Order ${order.code || order._docId}:`);
-            dateFields.forEach(field => {
-                const value = this.getNestedValue(order, field);
-                if (value) {
-                    console.log(`   - ${field}: ${value}`);
-                }
-            });
-        }
-
-        // Tentar cada campo em ordem de prioridade
+        // Procurar o primeiro campo válido
         for (const field of dateFields) {
-            const value = this.getNestedValue(order, field);
+            const value = order[field];
 
             if (value) {
-                const date = this.parseDate(value);
+                // Tentar converter para Date
+                const date = this.convertToDate(value);
                 if (date && !isNaN(date.getTime())) {
-                    // Validar que a data não é no futuro
-                    const now = new Date();
-                    if (date <= now) {
-                        // DEBUG: mostrar qual campo foi usado
-                        if (Math.random() < 0.05) { // 5% de chance
-                            console.log(`   ✅ Usando campo "${field}" com data: ${date.toLocaleDateString()}`);
-                        }
-                        return date;
-                    }
+                    return date;
                 }
             }
         }
 
-        // Se não encontrou nenhuma data válida, retornar uma data antiga como fallback
-        console.warn(`⚠️ Nenhuma data válida encontrada para order:`, {
-            id: order._docId || order._id,
-            code: order.code,
-            status: order.status || order.serviceStatus
-        });
-
-        // Retornar data de 1 ano atrás como fallback
-        const fallbackDate = new Date();
-        fallbackDate.setFullYear(fallbackDate.getFullYear() - 1);
-        return fallbackDate;
+        // Se não encontrou nenhuma data válida, usar data atual
+        console.warn('⚠️ Nenhuma data válida encontrada no pedido:', order.code || order._docId);
+        return new Date();
     }
 
     /**
-     * NOVO MÉTODO: Buscar valor aninhado (suporta campos como "metadata.date")
+     * Converter valor para Date - suporta múltiplos formatos
      */
-    private getNestedValue(obj: any, path: string): any {
-        const parts = path.split('.');
-        let current = obj;
-
-        for (const part of parts) {
-            if (current && typeof current === 'object' && part in current) {
-                current = current[part];
-            } else {
-                return null;
-            }
-        }
-
-        return current;
-    }
-
-    /**
-     * NOVO MÉTODO: Parser universal de datas (CORRIGIDO PARA FORMATO DO SISTEMA)
-     */
-    private parseDate(value: any): Date | null {
+    private convertToDate(value: any): Date | null {
         if (!value) return null;
 
-        // Se já é Date válida
+        // Já é um Date
         if (value instanceof Date) {
             return value;
         }
 
-        // Se é string (FORMATO PRINCIPAL DO SISTEMA: "YYYY-MM-DD HH:MM:SS")
+        // String
         if (typeof value === 'string') {
-            value = value.trim();
+            // Formato ISO
+            if (value.includes('T')) {
+                return new Date(value);
+            }
 
-            // FORMATO PRINCIPAL: "2020-11-27 17:36:34"
-            const mainFormatMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2}):(\d{2})$/);
-            if (mainFormatMatch) {
-                const year = parseInt(mainFormatMatch[1]);
-                const month = parseInt(mainFormatMatch[2]) - 1; // Mês é 0-indexed
-                const day = parseInt(mainFormatMatch[3]);
-                const hour = parseInt(mainFormatMatch[4]);
-                const minute = parseInt(mainFormatMatch[5]);
-                const second = parseInt(mainFormatMatch[6]);
+            // Formato brasileiro DD/MM/YYYY
+            if (value.includes('/')) {
+                const parts = value.split(/[/ :]/);
+                if (parts.length >= 3) {
+                    // DD/MM/YYYY HH:mm:ss
+                    const day = parseInt(parts[0]);
+                    const month = parseInt(parts[1]) - 1; // Mês começa em 0
+                    const year = parseInt(parts[2]);
+                    const hour = parts[3] ? parseInt(parts[3]) : 0;
+                    const minute = parts[4] ? parseInt(parts[4]) : 0;
+                    const second = parts[5] ? parseInt(parts[5]) : 0;
 
-                const date = new Date(year, month, day, hour, minute, second);
-                if (!isNaN(date.getTime())) {
-                    return date;
+                    return new Date(year, month, day, hour, minute, second);
                 }
             }
 
-            // FORMATO SECUNDÁRIO: "2020-07-17" (só data)
-            const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-            if (dateOnlyMatch) {
-                const year = parseInt(dateOnlyMatch[1]);
-                const month = parseInt(dateOnlyMatch[2]) - 1;
-                const day = parseInt(dateOnlyMatch[3]);
-
-                const date = new Date(year, month, day, 0, 0, 0);
-                if (!isNaN(date.getTime())) {
-                    return date;
-                }
-            }
-
-            // Formato ISO (caso tenha)
-            if (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)) {
-                const date = new Date(value);
-                if (!isNaN(date.getTime())) {
-                    return date;
-                }
-            }
-
-            // Tentar parse direto como último recurso
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-                return date;
+            // Formato americano YYYY-MM-DD
+            if (value.includes('-')) {
+                return new Date(value);
             }
         }
 
-        // Se é objeto MongoDB Date/ISODate
-        if (value && typeof value === 'object') {
-            if (value.$date) {
-                return new Date(value.$date);
+        // Timestamp (número)
+        if (typeof value === 'number') {
+            // Timestamp em segundos
+            if (value < 10000000000) {
+                return new Date(value * 1000);
             }
+            // Timestamp em milissegundos
+            return new Date(value);
+        }
+
+        // Firebase Timestamp
+        if (value && typeof value === 'object') {
+            // Firestore Timestamp
             if (value.seconds) {
                 return new Date(value.seconds * 1000);
             }
-        }
-
-        // Se é timestamp numérico
-        if (typeof value === 'number') {
-            const date = value > 9999999999 ? new Date(value) : new Date(value * 1000);
-            if (!isNaN(date.getTime())) {
-                return date;
+            // Firebase ServerTimestamp
+            if (value.toDate && typeof value.toDate === 'function') {
+                return value.toDate();
             }
         }
 
@@ -948,46 +1078,193 @@ export class CustomerImportService {
     }
 
     /**
-     * Obter valor da order - CORRIGIDO
+     * Analisar cliente individual - VERSÃO FINAL COM DEBUG LORENA
      */
-    private getOrderValue(order: any): number {
-        // Se balance é um objeto, pegar o total de dentro dele
-        let value: any = 0;
+    private async analyzeCustomerFromOrders(customer: any): Promise<ICustomerAnalysis> {
+        const orders = customer.orders || [];
 
-        // Prioridade 1: balance.total (estrutura correta de ServiceOrders)
-        if (order.balance && typeof order.balance === 'object') {
-            value = order.balance.total || order.balance.subtotal || 0;
+        console.log(`\n📊 Analisando cliente: ${customer.name}`);
+        console.log(`   ID: ${customer._id}`);
+        console.log(`   Total de orders: ${orders.length}`);
+
+        // DEBUG ESPECIAL PARA LORENA
+        if (customer.name && customer.name.includes('LORENA MORAIS')) {
+            console.log(`\n🔴 DEBUG ESPECIAL - LORENA MORAIS:`);
+            console.log(`   - Customer Object:`, customer);
+            console.log(`   - Total Orders: ${orders.length}`);
+
+            // Mostrar todas as orders
+            orders.forEach((order, index) => {
+                console.log(`\n   Order ${index + 1}:`);
+                console.log(`   - Collection: ${order._collection}`);
+                console.log(`   - Code: ${order.code}`);
+                console.log(`   - RegisterDate: ${order.registerDate}`);
+                console.log(`   - PaymentDate: ${order.paymentDate}`);
+                console.log(`   - Value: ${order.balance?.total || order.total || 0}`);
+                console.log(`   - Customer in Order:`, order.customer);
+            });
         }
-        // Prioridade 2: paymentMethods (estrutura de CashierSales)
-        else if (order.paymentMethods && Array.isArray(order.paymentMethods)) {
-            value = order.paymentMethods.reduce((sum, payment) => {
-                return sum + (payment.value || 0);
-            }, 0);
+
+        // DEBUG: Mostrar primeira order para verificar estrutura (reduzir para 5%)
+        if (orders.length > 0 && Math.random() < 0.05) {
+            const firstOrder = orders[0];
+            console.log(`\n   🔍 DEBUG DA PRIMEIRA ORDER:`);
+            console.log(`   - Collection: ${firstOrder._collection}`);
+            console.log(`   - Type: ${firstOrder._type}`);
+            console.log(`   - Code: ${firstOrder.code}`);
+            console.log(`   - Possui customer: ${!!firstOrder.customer}`);
+            console.log(`   - Possui balance: ${!!firstOrder.balance}`);
+            console.log(`   - Balance.total: ${firstOrder.balance?.total}`);
+            console.log(`   - Total direto: ${firstOrder.total}`);
+            console.log(`   - Amount: ${firstOrder.amount}`);
         }
-        // Prioridade 3: produtos (somar salePrice * quantity)
-        else if (order.products && Array.isArray(order.products)) {
-            value = order.products.reduce((sum, product) => {
-                const price = product.salePrice || product.unitaryPrice || 0;
-                const quantity = product.quantity || 1;
-                return sum + (price * quantity);
-            }, 0);
+
+        // Otimização: Para clientes com muitas orders, usar cálculo agregado
+        const useOptimization = orders.length > 100;
+
+        let totalStats = {
+            total: 0,
+            count: 0,
+            firstDate: null as Date | null,
+            lastDate: null as Date | null
+        };
+
+        // Processar todas as orders
+        for (let i = 0; i < orders.length; i++) {
+            const order = orders[i];
+
+            // Extrair valor da order
+            const value = this.extractOrderValue(order);
+            if (value > 0) {
+                totalStats.total += value;
+                totalStats.count++;
+            }
+
+            // Extrair data
+            const orderDate = this.extractOrderDate(order);
+
+            // Atualizar primeira e última data
+            if (!totalStats.firstDate || orderDate < totalStats.firstDate) {
+                totalStats.firstDate = orderDate;
+            }
+            if (!totalStats.lastDate || orderDate > totalStats.lastDate) {
+                totalStats.lastDate = orderDate;
+            }
+
+            // Debug a cada 100 orders processadas
+            if (i > 0 && i % 100 === 0) {
+                console.log(`   ⏳ Processadas ${i} de ${orders.length} orders...`);
+            }
         }
-        // Prioridade 4: outros campos de valor
-        else {
-            value = order.balance ||
-                order.total ||
-                order.value ||
-                order.valor ||
-                order.totalValue ||
-                order.amount ||
-                order.valorTotal ||
-                order.totalAmount ||
-                order.subtotal ||
-                order.totalPrice ||
-                order.finalValue ||
-                order.totalFinal ||
-                order.saleValue ||
-                0;
+
+        // Calcular métricas finais
+        const now = new Date();
+        const totalSpent = totalStats.total || 0;
+        const firstPurchase = totalStats.firstDate || now;
+        const lastPurchase = totalStats.lastDate || now;
+
+        // Tratamento especial se não encontrou datas válidas
+        if (!totalStats.firstDate || !totalStats.lastDate) {
+            console.warn(`⚠️ Cliente ${customer.name} sem datas válidas nas orders. Usando data atual como fallback.`);
+            // Se temos orders, assumir que a última foi há 30 dias
+            if (orders.length > 0) {
+                lastPurchase.setDate(lastPurchase.getDate() - 30);
+                firstPurchase.setDate(firstPurchase.getDate() - 365);
+            }
+        }
+
+        // Calcular dias desde última compra
+        const daysSinceLastPurchase = Math.floor((now.getTime() - lastPurchase.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Debug final - ESPECIAL PARA LORENA
+        if (customer.name && customer.name.includes('LORENA MORAIS')) {
+            console.log(`\n🔴 RESULTADO FINAL - LORENA:`);
+            console.log(`   💰 Total gasto: R$ ${totalSpent.toFixed(2)}`);
+            console.log(`   📅 Primeira compra: ${firstPurchase.toLocaleDateString()}`);
+            console.log(`   📅 Última compra: ${lastPurchase.toLocaleDateString()}`);
+            console.log(`   ⏱️ Dias desde última compra: ${daysSinceLastPurchase} dias`);
+            console.log(`   📦 Total de compras: ${orders.length}`);
+        } else {
+            console.log(`   💰 Total gasto: R$ ${totalSpent.toFixed(2)}`);
+            console.log(`   📅 Primeira compra: ${firstPurchase.toLocaleDateString()}`);
+            console.log(`   📅 Última compra: ${lastPurchase.toLocaleDateString()}`);
+            console.log(`   ⏱️ Dias desde última compra: ${daysSinceLastPurchase} dias`);
+        }
+
+        // Calcular outras métricas
+        const totalPurchases = useOptimization ? totalStats.count : orders.length;
+        const averageTicket = totalPurchases > 0 ? totalSpent / totalPurchases : 0;
+
+        // Frequência mensal
+        const monthsDiff = firstPurchase < now
+            ? Math.max(1, (now.getTime() - firstPurchase.getTime()) / (1000 * 60 * 60 * 24 * 30))
+            : 1;
+        const purchaseFrequency = totalPurchases / monthsDiff;
+
+        // Categorização do cliente
+        const metrics = {
+            daysSinceLastPurchase,
+            purchaseFrequency,
+            totalSpent,
+            averageTicket
+        };
+
+        const category = this.categorizeCustomer(metrics);
+        const score = this.calculateCustomerScore(metrics);
+
+        // Análise de produtos/categorias mais comprados
+        const productAnalysis = this.analyzeTopProducts(orders);
+
+        const analysis: ICustomerAnalysis = {
+            customerId: customer._id,
+            customerName: customer.name || 'Cliente sem nome',
+            email: customer.email || '',
+            phone: customer.phone || '',
+            totalSpent,
+            totalPurchases,
+            averageTicket,
+            purchaseFrequency,
+            daysSinceLastPurchase,
+            lastPurchaseDate: lastPurchase,
+            firstPurchaseDate: firstPurchase,
+            score,
+            category,
+            priority: this.calculatePriority(score, category),
+            topCategories: productAnalysis.categories,
+            topProducts: productAnalysis.products,
+            source: customer.source || 'Múltiplas origens',
+            recommendedAction: this.getRecommendedAction(category),
+            observations: this.generateObservations(metrics),
+            suggestedActions: this.generateSuggestedActions(category, metrics),
+            scoreReason: this.getScoreReason(metrics)
+        };
+
+        return analysis;
+    }
+
+    /**
+     * Extrair valor da order - suporta múltiplos formatos
+     */
+    private extractOrderValue(order: any): number {
+        // Tentar múltiplas formas de pegar o valor
+        const value = order.balance?.total ||
+            order.total ||
+            order.amount ||
+            order.valor ||
+            order.value ||
+            order.valorTotal ||
+            order.totalAmount ||
+            0;
+
+        // DEBUG ocasional (1% das vezes)
+        if (Math.random() < 0.01 && value === 0) {
+            console.warn(`⚠️ Order sem valor detectado:`, {
+                code: order.code,
+                collection: order._collection,
+                hasBalance: !!order.balance,
+                hasTotal: !!order.total,
+                hasAmount: !!order.amount
+            });
         }
 
         // Converter para número se necessário
@@ -1001,428 +1278,170 @@ export class CustomerImportService {
     }
 
     /**
-     * Analisar cliente individual - VERSÃO FINAL CORRIGIDA
+     * Analisar produtos mais comprados
      */
-    private async analyzeCustomerFromOrders(customer: any): Promise<ICustomerAnalysis> {
-        const orders = customer.orders || [];
+    private analyzeTopProducts(orders: any[]): { categories: string[], products: Array<{ name: string, count: number }> } {
+        const productCount = new Map<string, number>();
+        const categorySet = new Set<string>();
 
-        console.log(`\n📊 Analisando cliente: ${customer.name}`);
-        console.log(`   ID: ${customer._id}`);
-        console.log(`   Total de orders: ${orders.length}`);
+        // Limitar análise para performance
+        const ordersToAnalyze = orders.slice(-100); // Últimas 100 compras
 
-        // DEBUG: Mostrar primeira order para verificar estrutura
-        if (orders.length > 0 && Math.random() < 0.2) { // 20% de chance de debug
-            const firstOrder = orders[0];
-            console.log(`\n   🔍 DEBUG DA PRIMEIRA ORDER:`);
-            console.log(`   - Collection: ${firstOrder._collection}`);
-            console.log(`   - Type: ${firstOrder._type}`);
-            console.log(`   - Code: ${firstOrder.code}`);
-            console.log(`   - Status: ${firstOrder.status || firstOrder.serviceStatus || 'N/A'}`);
+        ordersToAnalyze.forEach(order => {
+            // Produtos
+            const items = order.items || order.products || order.produtos || [];
+            items.forEach((item: any) => {
+                if (item.name || item.nome) {
+                    const productName = item.name || item.nome;
+                    productCount.set(productName, (productCount.get(productName) || 0) + 1);
 
-            // Extrair e mostrar data
-            const date = this.extractOrderDate(firstOrder);
-            console.log(`   - Data original: ${firstOrder.registerDate || firstOrder.entryDate || 'sem data'}`);
-            console.log(`   - Data processada: ${date.toLocaleDateString()} (${this.formatDateDebug(date)})`);
-
-            // Extrair e mostrar valor
-            const value = this.getOrderValue(firstOrder);
-            console.log(`   - Balance: ${JSON.stringify(firstOrder.balance)}`);
-            console.log(`   - Valor processado: R$ ${value.toFixed(2)}`);
-        }
-
-        // Se tem muitas orders, trabalhar com amostra + estatísticas
-        const useOptimization = orders.length > 1000;
-        let workingOrders = orders;
-        let totalStats = { count: orders.length, total: 0 };
-
-        if (useOptimization) {
-            // Calcular total real de todas as orders
-            totalStats.total = orders.reduce((sum, order) => {
-                const value = this.getOrderValue(order);
-                return sum + value;
-            }, 0);
-
-            // Trabalhar com amostra das 1000 mais recentes
-            workingOrders = orders
-                .sort((a, b) => {
-                    const dateA = this.extractOrderDate(a);
-                    const dateB = this.extractOrderDate(b);
-                    return dateB.getTime() - dateA.getTime();
-                })
-                .slice(0, 1000);
-        }
-
-        // Calcular métricas
-        const now = new Date();
-        let totalSpent = useOptimization ? totalStats.total : 0;
-        let firstPurchase = now;
-        let lastPurchase = new Date(0);
-        const categories = new Set<string>();
-        const products = new Map<string, number>();
-
-        // Processar orders
-        workingOrders.forEach(order => {
-            // Calcular valor total se não está otimizado
-            if (!useOptimization) {
-                const orderValue = this.getOrderValue(order);
-                totalSpent += orderValue;
-            }
-
-            // Extrair data
-            const orderDate = this.extractOrderDate(order);
-
-            if (orderDate && !isNaN(orderDate.getTime())) {
-                if (orderDate < firstPurchase) firstPurchase = orderDate;
-                if (orderDate > lastPurchase) lastPurchase = orderDate;
-            }
-
-            // Produtos (CashierSales e Sales)
-            const items = order.products || order.items || order.produtos || [];
-            if (Array.isArray(items)) {
-                items.forEach((item: any) => {
-                    const productName = item.name || item.productName || item.nome || item.product || item.description;
-                    const category = item.category || item.categoria;
-
-                    // Categoria pode ser string ou objeto
-                    if (category) {
-                        if (typeof category === 'string') {
-                            categories.add(category);
-                        } else if (category.name) {
-                            categories.add(category.name);
-                        }
+                    // Categoria
+                    if (item.category?.name) {
+                        categorySet.add(item.category.name);
                     }
-
-                    if (productName) {
-                        products.set(productName, (products.get(productName) || 0) + 1);
-                    }
-                });
-            }
-
-            // Serviços (ServiceOrders)
-            if (order.services && Array.isArray(order.services)) {
-                order.services.forEach((service: any) => {
-                    const serviceName = service.name || service.description;
-                    if (serviceName) {
-                        products.set(`Serviço: ${serviceName}`, (products.get(`Serviço: ${serviceName}`) || 0) + 1);
-                        categories.add('Serviços');
-                    }
-                });
-            }
+                }
+            });
         });
 
-        // VALIDAÇÃO: Se não encontrou datas válidas, usar fallback
-        if (lastPurchase.getTime() === 0) {
-            console.log(`   ⚠️ AVISO: Nenhuma data válida encontrada! Usando data atual como fallback.`);
-            // Se temos orders, assumir que a última foi há 30 dias
-            if (orders.length > 0) {
-                lastPurchase = new Date();
-                lastPurchase.setDate(lastPurchase.getDate() - 30);
-                firstPurchase = new Date();
-                firstPurchase.setDate(firstPurchase.getDate() - 365);
-            } else {
-                lastPurchase = now;
-                firstPurchase = now;
-            }
-        }
-
-        // Calcular dias desde última compra
-        const daysSinceLastPurchase = Math.floor((now.getTime() - lastPurchase.getTime()) / (1000 * 60 * 60 * 24));
-
-        // Debug final
-        console.log(`   💰 Total gasto: R$ ${totalSpent.toFixed(2)}`);
-        console.log(`   📅 Primeira compra: ${firstPurchase.toLocaleDateString()}`);
-        console.log(`   📅 Última compra: ${lastPurchase.toLocaleDateString()}`);
-        console.log(`   ⏱️ Dias desde última compra: ${daysSinceLastPurchase} dias`);
-
-        // Calcular outras métricas
-        const totalPurchases = useOptimization ? totalStats.count : orders.length;
-        const averageTicket = totalPurchases > 0 ? totalSpent / totalPurchases : 0;
-
-        // Frequência mensal
-        const monthsDiff = firstPurchase < now
-            ? Math.max(1, (now.getTime() - firstPurchase.getTime()) / (1000 * 60 * 60 * 24 * 30))
-            : 1;
-        const purchaseFrequency = totalPurchases / monthsDiff;
-
-        // Calcular score
-        const score = this.calculateCustomerScore({
-            totalSpent,
-            purchaseFrequency,
-            daysSinceLastPurchase,
-            averageTicket,
-            totalPurchases
-        });
-
-        // Determinar categoria
-        const category = this.determineCustomerCategoryImproved({
-            score,
-            daysSinceLastPurchase,
-            totalPurchases,
-            totalSpent,
-            purchaseFrequency,
-            averageTicket
-        });
-
-        console.log(`   🏆 Score: ${score}`);
-        console.log(`   🏷️ Categoria: ${category}`);
-
-        // Determinar prioridade baseada na categoria
-        const priority = this.determinePriority(category, score);
-
-        // Top produtos
-        const topProducts = Array.from(products.entries())
+        // Top 5 produtos
+        const topProducts = Array.from(productCount.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(([name, count]) => ({ name, count }));
 
-        // Gerar ações sugeridas
-        const suggestedActions = this.generateSuggestedActions(category, {
-            daysSinceLastPurchase,
-            averageTicket,
-            purchaseFrequency,
-            totalSpent,
-            totalPurchases
-        });
-
-        // Gerar razão do score
-        const scoreReason = this.generateScoreReason(score, {
-            daysSinceLastPurchase,
-            purchaseFrequency,
-            totalSpent,
-            averageTicket
-        });
-
         return {
-            customerId: customer._id,
-            customerName: customer.name,
-            email: customer.email || '',
-            phone: customer.phone || '',
-            totalSpent,
-            totalPurchases,
-            averageTicket,
-            purchaseFrequency,
-            daysSinceLastPurchase,
-            lastPurchaseDate: lastPurchase,
-            firstPurchaseDate: firstPurchase,
-            score,
-            category,
-            priority,
-            topCategories: Array.from(categories).slice(0, 5),
-            topProducts,
-            source: customer.source || 'Desconhecido',
-            recommendedAction: this.getRecommendedAction(category, daysSinceLastPurchase, totalSpent),
-            observations: this.generateObservations({
-                category,
-                daysSinceLastPurchase,
-                purchaseFrequency,
-                totalSpent,
-                averageTicket
-            }),
-            suggestedActions,
-            scoreReason
+            categories: Array.from(categorySet).slice(0, 3),
+            products: topProducts
         };
     }
 
     /**
-     * NOVO MÉTODO: Formatar data para debug
+     * Categorizar cliente baseado em RFM
      */
-    private formatDateDebug(date: Date): string {
-        if (!date || isNaN(date.getTime())) {
-            return 'data inválida';
+    private categorizeCustomer(metrics: any): 'new' | 'hot' | 'warm' | 'cold' | 'vip' {
+        const { daysSinceLastPurchase, purchaseFrequency, totalSpent } = metrics;
+
+        // VIP: Alto valor e frequência
+        if (totalSpent > 5000 && purchaseFrequency > 2) {
+            return 'vip';
         }
 
-        const now = new Date();
-        const diffMs = now.getTime() - date.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        // Baseado em recência
+        if (daysSinceLastPurchase <= 30) {
+            return 'hot';
+        } else if (daysSinceLastPurchase <= 90) {
+            return 'warm';
+        } else if (daysSinceLastPurchase <= 180) {
+            return 'cold';
+        }
 
-        if (diffDays === 0) return 'hoje';
-        if (diffDays === 1) return 'ontem';
-        if (diffDays < 7) return `${diffDays} dias atrás`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} semanas atrás`;
-        if (diffDays < 365) return `${Math.floor(diffDays / 30)} meses atrás`;
+        // Novo cliente (apenas uma compra recente)
+        if (metrics.totalPurchases === 1 && daysSinceLastPurchase <= 30) {
+            return 'new';
+        }
 
-        return `${Math.floor(diffDays / 365)} anos atrás`;
+        return 'cold';
     }
 
     /**
-     * Gerar ações sugeridas baseadas no perfil do cliente
+     * Calcular score do cliente (0-100)
+     */
+    private calculateCustomerScore(metrics: any): number {
+        const { daysSinceLastPurchase, purchaseFrequency, totalSpent, averageTicket } = metrics;
+
+        // Pesos
+        const weights = {
+            recency: 0.35,      // 35%
+            frequency: 0.25,    // 25%
+            monetary: 0.25,     // 25%
+            ticket: 0.15        // 15%
+        };
+
+        // Normalizar métricas (0-100)
+        const recencyScore = Math.max(0, 100 - (daysSinceLastPurchase / 3.65)); // 365 dias = 0
+        const frequencyScore = Math.min(100, purchaseFrequency * 20); // 5+ compras/mês = 100
+        const monetaryScore = Math.min(100, (totalSpent / 100)); // R$ 10.000+ = 100
+        const ticketScore = Math.min(100, (averageTicket / 5)); // R$ 500+ = 100
+
+        const finalScore =
+            (recencyScore * weights.recency) +
+            (frequencyScore * weights.frequency) +
+            (monetaryScore * weights.monetary) +
+            (ticketScore * weights.ticket);
+
+        return Math.round(finalScore);
+    }
+
+    /**
+     * Calcular prioridade
+     */
+    private calculatePriority(score: number, category: string): 'high' | 'medium' | 'low' {
+        if (category === 'vip' || score >= 80) return 'high';
+        if (category === 'hot' || score >= 50) return 'medium';
+        return 'low';
+    }
+
+    /**
+     * Obter razão do score
+     */
+    private getScoreReason(metrics: any): string {
+        const reasons = [];
+
+        if (metrics.daysSinceLastPurchase <= 30) {
+            reasons.push('Compra recente');
+        }
+        if (metrics.purchaseFrequency > 2) {
+            reasons.push('Alta frequência');
+        }
+        if (metrics.totalSpent > 1000) {
+            reasons.push('Alto valor total');
+        }
+        if (metrics.averageTicket > 200) {
+            reasons.push('Ticket médio elevado');
+        }
+
+        return reasons.join(', ') || 'Análise baseada em histórico';
+    }
+
+    /**
+     * Gerar ações sugeridas
      */
     private generateSuggestedActions(category: string, metrics: any): string[] {
         const actions = [];
 
         switch (category) {
-            case 'vip':
-                actions.push('Oferecer programa VIP');
-                actions.push('Atendimento prioritário');
-                actions.push('Produtos exclusivos');
-                break;
             case 'hot':
-                actions.push('Enviar promoções personalizadas');
-                actions.push('Recomendar produtos complementares');
-                if (metrics.purchaseFrequency > 2) {
-                    actions.push('Programa de fidelidade');
-                }
+                actions.push('Oferecer produtos complementares');
+                actions.push('Programa de fidelidade');
                 break;
             case 'warm':
                 actions.push('Campanha de reengajamento');
-                actions.push('Cupom de desconto');
-                if (metrics.daysSinceLastPurchase > 45) {
-                    actions.push('Ligação de follow-up');
-                }
+                actions.push('Cupom de desconto personalizado');
                 break;
             case 'cold':
                 actions.push('Oferta especial de reativação');
                 actions.push('Pesquisa de satisfação');
-                actions.push('Desconto progressivo');
                 break;
             case 'new':
                 actions.push('Email de boas-vindas');
-                actions.push('Cupom primeira compra');
-                actions.push('Acompanhar experiência');
+                actions.push('Desconto na segunda compra');
+                break;
+            case 'vip':
+                actions.push('Atendimento prioritário');
+                actions.push('Ofertas exclusivas');
                 break;
         }
 
-        // Adicionar ações baseadas em métricas específicas
-        if (metrics.daysSinceLastPurchase > 60 && metrics.daysSinceLastPurchase < 180) {
-            actions.push('Follow-up por WhatsApp');
-        }
-
-        if (metrics.averageTicket > 1000) {
-            actions.push('Oferecer parcelamento');
-        }
-
-        if (metrics.purchaseFrequency > 3) {
-            actions.push('Criar lista VIP WhatsApp');
-        }
-
-        // Remover duplicatas e retornar máximo 3 ações
-        return [...new Set(actions)].slice(0, 3);
-    }
-
-    /**
-     * Gerar explicação do score
-     */
-    private generateScoreReason(score: number, metrics: any): string {
-        const reasons = [];
-
-        // Análise de recência
-        if (metrics.daysSinceLastPurchase < 30) {
-            reasons.push('compra recente');
-        } else if (metrics.daysSinceLastPurchase > 180) {
-            reasons.push('muito tempo sem comprar');
-        }
-
-        // Análise de frequência
-        if (metrics.purchaseFrequency > 3) {
-            reasons.push('cliente frequente');
-        } else if (metrics.purchaseFrequency < 0.5) {
-            reasons.push('baixa frequência');
-        }
-
-        // Análise de valor
-        if (metrics.totalSpent > 5000) {
-            reasons.push('alto valor total');
-        }
-        if (metrics.averageTicket > 1000) {
-            reasons.push('ticket elevado');
-        }
-
-        // Montar frase final
-        if (score >= 80) {
-            return `Cliente premium: ${reasons.join(', ')}`;
-        } else if (score >= 60) {
-            return `Bom potencial: ${reasons.join(', ')}`;
-        } else if (score >= 40) {
-            return `Necessita atenção: ${reasons.join(', ')}`;
-        } else {
-            return `Requer estratégia especial: ${reasons.join(', ')}`;
-        }
-    }
-
-    /**
-     * Determinar prioridade do cliente
-     */
-    private determinePriority(category: string, score: number): 'high' | 'medium' | 'low' {
-        if (category === 'vip' || (category === 'hot' && score >= 80)) {
-            return 'high';
-        }
-        if (category === 'warm' || category === 'new' || (category === 'hot' && score >= 60)) {
-            return 'medium';
-        }
-        return 'low';
-    }
-
-    /**
-     * Calcular score do cliente
-     */
-    private calculateCustomerScore(metrics: any): number {
-        let score = 0;
-
-        // Valor total (40%)
-        if (metrics.totalSpent > 10000) score += 40;
-        else if (metrics.totalSpent > 5000) score += 30;
-        else if (metrics.totalSpent > 1000) score += 20;
-        else if (metrics.totalSpent > 500) score += 10;
-        else score += 5;
-
-        // Frequência (30%)
-        if (metrics.purchaseFrequency > 5) score += 30;
-        else if (metrics.purchaseFrequency > 2) score += 20;
-        else if (metrics.purchaseFrequency > 1) score += 10;
-        else score += 5;
-
-        // Recência (30%)
-        if (metrics.daysSinceLastPurchase < 30) score += 30;
-        else if (metrics.daysSinceLastPurchase < 60) score += 20;
-        else if (metrics.daysSinceLastPurchase < 90) score += 10;
-        else if (metrics.daysSinceLastPurchase < 180) score += 5;
-
-        return Math.min(100, score);
-    }
-
-    /**
-     * Determinar categoria do cliente - VERSÃO MELHORADA
-     */
-    private determineCustomerCategoryImproved(metrics: any): 'new' | 'hot' | 'warm' | 'cold' | 'vip' {
-        // VIP - Critérios mais flexíveis
-        if ((metrics.totalSpent > 3000 && metrics.score >= 70) ||
-            (metrics.totalSpent > 5000) ||
-            (metrics.purchaseFrequency > 4 && metrics.averageTicket > 500)) {
-            return 'vip';
-        }
-
-        // Novo - Primeira ou segunda compra recente
-        if (metrics.totalPurchases <= 3 && metrics.daysSinceLastPurchase < 60) {
-            return 'new';
-        }
-
-        // Quente - Ativo recentemente OU bom score
-        if (metrics.daysSinceLastPurchase < 45 ||
-            (metrics.daysSinceLastPurchase < 90 && metrics.score >= 50) ||
-            (metrics.purchaseFrequency > 2)) {
-            return 'hot';
-        }
-
-        // Morno - Moderadamente ativo
-        if (metrics.daysSinceLastPurchase < 120 ||
-            metrics.score >= 30 ||
-            metrics.totalSpent > 500) {
-            return 'warm';
-        }
-
-        // Frio - Inativo (só cai aqui se não passou nos outros)
-        return 'cold';
+        return actions;
     }
 
     /**
      * Obter ação recomendada
      */
-    private getRecommendedAction(category: string, daysSince: number, totalSpent: number): string {
+    private getRecommendedAction(category: string): string {
         switch (category) {
             case 'vip':
-                return '⭐ Oferecer benefícios exclusivos e atendimento prioritário';
-            case 'new':
-                return '🎯 Enviar cupom de segunda compra e acompanhar experiência';
+                return '⭐ Tratamento VIP - manter engajamento com ofertas exclusivas';
             case 'hot':
                 return '🔥 Apresentar novos produtos e promoções personalizadas';
             case 'warm':
@@ -1525,7 +1544,7 @@ export class CustomerImportService {
             const doc = snapshot.docs[0];
             return {
                 _id: doc.id,
-                ...doc.data()
+                ...(doc as any).data()
             };
         }
 
@@ -1589,6 +1608,235 @@ export class CustomerImportService {
             .collection('CRMLeads')
             .doc(leadId)
             .update(updateData);
+    }
+
+    /**
+     * Analisar cliente isolado - DEBUG
+     */
+    public async analyzeSpecificCustomer(customerName: string): Promise<void> {
+        try {
+            console.log(`\n🔍 ANÁLISE ISOLADA: "${customerName}"`);
+
+            const allCustomersMap = new Map();
+
+            // Buscar em todas as collections
+            for (const collName of ['CashierSales', 'ServiceOrders', 'Sales', 'Requests']) {
+                const snapshot = await this.iToolsService.database()
+                    .collection(collName)
+                    .where([
+                        { field: 'owner', operator: '=', value: Utilities.storeID }
+                    ])
+                    .get();
+
+                if (snapshot && snapshot.docs) {
+                    snapshot.docs.forEach(doc => {
+                        const data = (doc as any).data();
+                        const customer = data.customer || data.client || data.cliente || {};
+                        const customerDocName = customer.name || customer.nome || '';
+
+                        if (customerDocName.toUpperCase().includes(customerName.toUpperCase())) {
+                            // Processar documento
+                            let result = null;
+
+                            if (collName === 'CashierSales') {
+                                result = this.processCashierSaleDocument(doc);
+                            } else if (collName === 'ServiceOrders') {
+                                result = this.processServiceOrderDocument(doc);
+                            } else if (collName === 'Sales') {
+                                result = this.processSaleDocument(doc);
+                            } else if (collName === 'Requests') {
+                                result = this.processRequestDocument(doc);
+                            }
+
+                            if (result && result.customerId) {
+                                const finalCustomerId = customer._id || result.customerId;
+
+                                if (allCustomersMap.has(finalCustomerId)) {
+                                    const existing = allCustomersMap.get(finalCustomerId);
+                                    existing.orders.push(result.orderData);
+                                } else {
+                                    allCustomersMap.set(finalCustomerId, {
+                                        ...result.customerData,
+                                        orders: [result.orderData]
+                                    });
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+
+            // Analisar clientes encontrados
+            const customers = Array.from(allCustomersMap.values());
+            console.log(`\n👥 Clientes únicos encontrados: ${customers.length}`);
+
+            if (customers.length > 0) {
+                this.updateProgress('analyzing', 0, customers.length, 'Analisando...');
+
+                const analyses = await this.analyzeCustomersInParallel(customers);
+                analyses.sort((a, b) => b.score - a.score);
+
+                // Mostrar resultado
+                console.log(`\n📊 RESULTADO DA ANÁLISE ISOLADA:`);
+                analyses.forEach(analysis => {
+                    console.log(`\n   Cliente: ${analysis.customerName}`);
+                    console.log(`   - ID: ${analysis.customerId}`);
+                    console.log(`   - Total gasto: R$ ${analysis.totalSpent.toFixed(2)}`);
+                    console.log(`   - Total de compras: ${analysis.totalPurchases}`);
+                    console.log(`   - Última compra: ${analysis.lastPurchaseDate.toLocaleDateString()}`);
+                    console.log(`   - Dias desde última compra: ${analysis.daysSinceLastPurchase}`);
+                    console.log(`   - Categoria: ${analysis.category}`);
+                    console.log(`   - Score: ${analysis.score}`);
+                });
+
+                this.analysisResultsSubject.next(analyses);
+                this.updateProgress('completed', customers.length, customers.length, 'Análise isolada concluída!');
+            } else {
+                this.updateProgress('completed', 0, 0, 'Nenhum cliente encontrado');
+            }
+
+        } catch (error) {
+            console.error('❌ Erro na análise isolada:', error);
+            this.updateProgress('error', 0, 0, 'Erro ao analisar cliente');
+        }
+    }
+
+    /**
+     * MÉTODO PRINCIPAL - Análise otimizada
+     */
+    public async analyzeCustomers(): Promise<ICustomerAnalysis[]> {
+        try {
+            console.log('🚀 INICIANDO ANÁLISE OTIMIZADA DE CLIENTES...');
+
+            // ADICIONAR DEBUG NO INÍCIO
+            await this.debugDuplicateIssues();
+
+            // Resetar resultados
+            this.analysisResultsSubject.next([]);
+            this.updateProgress('fetching', 0, 0, 'Contando clientes...');
+
+            // 1️⃣ CONTAR DOCUMENTOS
+            const totalCounts = await this.countAllDocuments();
+            const totalDocuments = totalCounts.sales + totalCounts.cashier + totalCounts.orders + totalCounts.requests;
+
+            console.log(`📊 Total de documentos para processar: ${totalDocuments}`);
+            console.log(`   - Vendas (Sales): ${totalCounts.sales}`);
+            console.log(`   - PDV (CashierSales): ${totalCounts.cashier}`);
+            console.log(`   - OS (ServiceOrders): ${totalCounts.orders}`);
+            console.log(`   - Pedidos (Requests): ${totalCounts.requests}`);
+
+            if (totalDocuments === 0) {
+                this.updateProgress('completed', 0, 0, 'Nenhum cliente encontrado');
+                return [];
+            }
+
+            // 2️⃣ BUSCAR E PROCESSAR COM PAGINAÇÃO
+            this.updateProgress('fetching', 0, totalDocuments, 'Buscando dados...');
+
+            const allCustomersMap = new Map();
+            let processedCount = 0;
+
+            // Processar cada coleção com paginação
+            processedCount = await this.processBatchCollectionPaginated(
+                'Sales',
+                totalCounts.sales,
+                allCustomersMap,
+                processedCount,
+                totalDocuments,
+                this.processSaleDocument
+            );
+
+            processedCount = await this.processBatchCollectionPaginated(
+                'CashierSales',
+                totalCounts.cashier,
+                allCustomersMap,
+                processedCount,
+                totalDocuments,
+                this.processCashierSaleDocument
+            );
+
+            processedCount = await this.processBatchCollectionPaginated(
+                'ServiceOrders',
+                totalCounts.orders,
+                allCustomersMap,
+                processedCount,
+                totalDocuments,
+                this.processServiceOrderDocument
+            );
+
+            processedCount = await this.processBatchCollectionPaginated(
+                'Requests',
+                totalCounts.requests,
+                allCustomersMap,
+                processedCount,
+                totalDocuments,
+                this.processRequestDocument
+            );
+
+            // 3️⃣ ANALISAR CLIENTES
+            const customers = Array.from(allCustomersMap.values());
+            console.log(`\n👥 Total de clientes únicos: ${customers.length}`);
+
+            // DEBUG: Mostrar resumo dos clientes detectados
+            console.log(`\n📊 RESUMO DOS CLIENTES DETECTADOS:`);
+
+            // Procurar especificamente por LORENA
+            const lorenasFound = customers.filter(c => c.name && c.name.includes('LORENA MORAIS'));
+            if (lorenasFound.length > 0) {
+                console.log(`\n🔴 LORENAS ENCONTRADAS: ${lorenasFound.length}`);
+                lorenasFound.forEach(lorena => {
+                    console.log(`\n   Cliente: ${lorena.name}`);
+                    console.log(`   - ID: ${lorena._id}`);
+                    console.log(`   - Phone: ${lorena.phone}`);
+                    console.log(`   - CPF: ${lorena.cpfCnpj}`);
+                    console.log(`   - Total de vendas: ${lorena.orders.length}`);
+                    console.log(`   - Vendas IDs:`, lorena.orders.map(o => o.code || o._docId));
+                });
+            }
+
+            // Mostrar top 10 clientes por número de vendas
+            const topCustomers = customers
+                .sort((a, b) => b.orders.length - a.orders.length)
+                .slice(0, 10);
+
+            console.log(`\n📈 TOP 10 CLIENTES POR NÚMERO DE VENDAS:`);
+            topCustomers.forEach((customer, index) => {
+                console.log(`   ${index + 1}. ${customer.name}: ${customer.orders.length} vendas`);
+            });
+
+            this.updateProgress('analyzing', 0, customers.length, 'Analisando clientes...');
+
+            const analyses = await this.analyzeCustomersInParallel(customers);
+
+            // Ordenar por score
+            analyses.sort((a, b) => b.score - a.score);
+
+            // DEBUG FINAL: Mostrar resultado da LORENA
+            const lorenaResults = analyses.filter(a => a.customerName.includes('LORENA MORAIS'));
+            if (lorenaResults.length > 0) {
+                console.log(`\n🔴 RESULTADO FINAL PARA LORENA(S):`);
+                lorenaResults.forEach(lorena => {
+                    console.log(`\n   Cliente: ${lorena.customerName}`);
+                    console.log(`   - ID: ${lorena.customerId}`);
+                    console.log(`   - Total gasto: R$ ${lorena.totalSpent.toFixed(2)}`);
+                    console.log(`   - Total de compras: ${lorena.totalPurchases}`);
+                    console.log(`   - Última compra: ${lorena.lastPurchaseDate.toLocaleDateString()}`);
+                    console.log(`   - Dias desde última compra: ${lorena.daysSinceLastPurchase}`);
+                    console.log(`   - Categoria: ${lorena.category}`);
+                    console.log(`   - Score: ${lorena.score}`);
+                });
+            }
+
+            this.analysisResultsSubject.next(analyses);
+            this.updateProgress('completed', customers.length, customers.length, 'Análise concluída!');
+
+            return analyses;
+
+        } catch (error) {
+            console.error('❌ Erro na análise de clientes:', error);
+            this.updateProgress('error', 0, 0, 'Erro ao analisar clientes');
+            throw error;
+        }
     }
 
     /**
