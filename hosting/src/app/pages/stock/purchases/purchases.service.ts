@@ -332,6 +332,13 @@ export class PurchasesService {
 
       try {
 
+        // safe guardian para nao duplicar produtos apos aceitar vendas 
+        if (data.purchaseStatus == EStockPurchaseStatus.CONCLUDED) {
+          resolve(null);
+          return;
+        }
+
+
         if (!batch) { Utilities.loading() }
 
         batch = (batch || this.iToolsService.database().batch());

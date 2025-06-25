@@ -97,6 +97,7 @@ $transition-normal: 0.3s ease-out;
     flex-direction: column;
     box-shadow: $shadow-md;
     animation: slideIn $transition-normal;
+    overflow-y: auto; // permite rolar quando o conteúdo exceder a altura
 }
 
 @keyframes slideIn {
@@ -471,6 +472,7 @@ $transition-normal: 0.3s ease-out;
     .modal-content {
         max-height: 100vh;
         border-radius: 0;
+        overflow-y: auto;
     }
 
     .info-grid {
@@ -535,6 +537,7 @@ $transition-normal: 0.3s ease-out;
 // ===========================
 .orders-list {
     max-height: 600px;
+    max-height: 60vh; // altura relativa para melhor responsividade
     overflow-y: auto;
     padding-right: $spacing-sm;
 
@@ -816,5 +819,10 @@ $transition-normal: 0.3s ease-out;
     .modal-content {
         max-width: 95%;
         margin: $spacing-sm;
+        overflow-y: auto;
+    }
+
+    .orders-list {
+        max-height: 40vh;
     }
 }
