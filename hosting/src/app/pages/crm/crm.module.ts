@@ -8,6 +8,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { DragDropModule } from '@angular/cdk/drag-drop';
 
+
+
 // Módulos
 import { SharedModule } from '@shared/shared.module';
 import { CrmRoutingModule } from './crm.routing';
@@ -23,6 +25,7 @@ import { ActivitiesComponent } from './activities/activities.component';
 import { CustomerImportComponent } from './components/customer-import/customer-import.component';
 import { MessageTemplatesComponent } from './components/message-templates/message-templates.component';
 import { BirthdayCustomersComponent } from './components/birthday-customers/birthday-customers.component';
+import { CustomerDetailModalComponent } from './components/customer-detail-modal/customer-detail-modal.component';
 
 // Serviços
 import { CrmService } from './crm.service';
@@ -51,7 +54,8 @@ import { SalesIntegrationService } from './services/sales-integration.service';
         // Componentes auxiliares
         CustomerImportComponent,
         MessageTemplatesComponent,
-        BirthdayCustomersComponent  // ← NOVO COMPONENTE ADICIONADO
+        BirthdayCustomersComponent,  // ← NOVO COMPONENTE ADICIONADO
+        CustomerDetailModalComponent // <-- ADICIONE ESTA LINHA
     ],
     providers: [
         CrmService,

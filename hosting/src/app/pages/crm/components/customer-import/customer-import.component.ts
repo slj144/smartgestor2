@@ -1,6 +1,6 @@
 // Arquivo: customer-import.component.ts
 // Localização: src/app/pages/crm/components/customer-import/customer-import.component.ts
-// Componente: Interface de Importação Inteligente de Clientes
+// VERSÃO CORRIGIDA com proteções e debug
 
 import { Component, OnInit, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { Subject } from 'rxjs';
@@ -25,13 +25,14 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
     @Output() onImportComplete = new EventEmitter<number>();
 
     private destroy$ = new Subject<void>();
+    private isAnalyzing = false; // Flag para evitar análises duplicadas
 
     // Estados
     public currentStep: 'start' | 'analyzing' | 'selection' | 'importing' | 'complete' = 'start';
 
     // Dados
     public analysisResults: ICustomerAnalysis[] = [];
-    public allAnalysisResults: ICustomerAnalysis[] = []; // Guarda todos os resultados originais
+    public allAnalysisResults: ICustomerAnalysis[] = [];
     public selectedCustomers: Set<string> = new Set();
     public importProgress = {
         status: 'idle',
@@ -45,6 +46,7 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
     public filterPriority = 'all';
     public searchTerm = '';
     public showOnlyNew = true;
+    public selectAll = false;
 
     // Estatísticas
     public stats = {
@@ -57,160 +59,138 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
         averageScore: 0
     };
 
-    // Controles de UI
-    public selectAll = false;
-    public sortBy: 'score' | 'value' | 'recent' = 'score';
-    public sortOrder: 'asc' | 'desc' = 'desc';
+    // Propriedades para o modal de detalhes
+    public selectedCustomerForDetails: any = null;
+    public selectedCustomerRawData: any = null;
 
     constructor(
         private customerImportService: CustomerImportService,
         private alertService: AlertService,
         private iToolsService: IToolsService
-    ) { }
+    ) {
+        console.log('🟢 CustomerImport: Componente construído');
+    }
 
     ngOnInit(): void {
-        // Observar progresso
-        this.customerImportService.importProgress$
-            .pipe(takeUntil(this.destroy$))
-            .subscribe(progress => {
-                this.importProgress = progress;
+        console.log('🟢 CustomerImport: ngOnInit iniciado');
 
-                // Atualizar step baseado no status
-                if (progress.status === 'analyzing') {
-                    this.currentStep = 'analyzing';
-                } else if (progress.status === 'completed' && this.currentStep === 'analyzing') {
-                    this.currentStep = 'selection';
-                } else if (progress.status === 'importing') {
-                    this.currentStep = 'importing';
-                } else if (progress.status === 'completed' && this.currentStep === 'importing') {
-                    this.currentStep = 'complete';
-                }
-            });
-
-        // Observar resultados da análise
+        // Subscrever aos resultados da análise
         this.customerImportService.analysisResults$
             .pipe(takeUntil(this.destroy$))
             .subscribe(results => {
-                this.allAnalysisResults = results; // Guarda todos os resultados
-                this.analysisResults = [...results]; // Cria uma cópia para filtrar
-                this.calculateStats();
-                this.applyFiltersAndSort();
+                console.log('📊 CustomerImport: Resultados recebidos via subscription:', results.length);
+
+                // Só processar se estiver analisando
+                if (this.isAnalyzing || results.length > 0) {
+                    this.analysisResults = results;
+                    this.allAnalysisResults = [...results];
+
+                    if (results.length > 0) {
+                        console.log('✅ CustomerImport: Mudando para selection com', results.length, 'clientes');
+                        this.currentStep = 'selection';
+                        this.calculateStats();
+                        this.applyFilters();
+                        this.isAnalyzing = false;
+                    } else if (this.isAnalyzing) {
+                        console.log('⚠️ CustomerImport: Análise completa mas sem resultados');
+                        this.alertService.alert('Nenhum cliente encontrado para análise', 'warning');
+                        this.currentStep = 'start';
+                        this.isAnalyzing = false;
+                    }
+                }
+            });
+
+        // Subscrever ao progresso
+        this.customerImportService.importProgress$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(progress => {
+                console.log('📈 CustomerImport: Progresso atualizado:', progress);
+                this.importProgress = progress;
+
+                // Só mudar para complete se estiver importando
+                if (progress.status === 'completed' && this.currentStep === 'importing') {
+                    this.currentStep = 'complete';
+                }
+
+                // Tratar erros
+                if (progress.status === 'error' && this.isAnalyzing) {
+                    console.error('❌ CustomerImport: Erro detectado durante análise');
+                    this.alertService.alert('Erro durante a análise. Tente novamente.', 'error');
+                    this.currentStep = 'start';
+                    this.isAnalyzing = false;
+                }
             });
     }
 
     ngOnDestroy(): void {
+        console.log('🔴 CustomerImport: Componente sendo destruído');
         this.destroy$.next();
         this.destroy$.complete();
-        this.customerImportService.resetProgress();
-    }
 
-    private async debugCollections(): Promise<void> {
-        console.log('🔍 DEBUG: Verificando estrutura dos dados...');
-        console.log('🏢 Store ID:', Utilities.storeID);
-
-        // Verificar TODOS os tipos de documentos
-        const collections = ['Requests', 'Sales', 'CashierSales', 'ServiceOrders'];
-
-        for (const collection of collections) {
-            try {
-                const snapshot = await this.iToolsService.database()
-                    .collection(collection)
-                    .where([{ field: 'owner', operator: '=', value: Utilities.storeID }])
-                    .limit(3) // Pegar 3 exemplos
-                    .get();
-
-                if (snapshot && snapshot.docs && snapshot.docs.length > 0) {
-                    console.log(`\n📦 Estrutura de ${collection}:`);
-
-                    snapshot.docs.forEach((doc, index) => {
-                        const data = doc.data();
-                        console.log(`\nExemplo ${index + 1}:`);
-                        console.log('ID:', doc.id);
-                        console.log('Campos principais:', Object.keys(data));
-
-                        // Verificar valores
-                        console.log('Valores encontrados:');
-                        ['total', 'value', 'valor', 'totalValue', 'amount', 'valorTotal',
-                            'totalAmount', 'subtotal', 'totalPrice', 'finalValue'].forEach(field => {
-                                if (data[field] !== undefined) {
-                                    console.log(`  - ${field}: ${data[field]}`);
-                                }
-                            });
-
-                        // Verificar datas
-                        console.log('Datas encontradas:');
-                        ['date', 'createdAt', 'created', 'registerDate', 'saleDate',
-                            'orderDate', 'datetime'].forEach(field => {
-                                if (data[field]) {
-                                    console.log(`  - ${field}: ${data[field]}`);
-                                }
-                            });
-
-                        // Verificar cliente
-                        console.log('Dados do cliente:');
-                        ['customer', 'client', 'cliente', 'customerId', 'clientId'].forEach(field => {
-                            if (data[field]) {
-                                console.log(`  - ${field}:`, data[field]);
-                            }
-                        });
-                    });
-                }
-            } catch (error) {
-                console.error(`❌ Erro ao verificar ${collection}:`, error);
-            }
-        }
-    }
-    // Adicione estes métodos na classe CustomerImportComponent
-
-    /**
-     * DEBUG: Buscar vendas de um cliente específico
-     */
-    public async debugCustomer(): Promise<void> {
-        const customerName = prompt('Digite o nome do cliente para debugar:');
-
-        if (customerName) {
-            console.log(`🔍 Iniciando debug para: ${customerName}`);
-
-            try {
-                await this.customerImportService.debugSpecificCustomer(customerName);
-                console.log('✅ Debug concluído! Verifique o console.');
-            } catch (error) {
-                console.error('❌ Erro no debug:', error);
-            }
+        // Só resetar se não estiver no meio de uma operação
+        if (!this.isAnalyzing && this.currentStep !== 'importing') {
+            this.customerImportService.resetProgress();
         }
     }
 
     /**
-     * Executar análise com log detalhado
+     * Iniciar análise
      */
-    public async analyzeWithDebug(): Promise<void> {
-        // Ativar modo debug temporariamente
-        console.log('🐛 MODO DEBUG ATIVADO - Logs detalhados serão exibidos');
-
-        // Fazer análise normal
-        await this.analyzeCustomers();
-    }
-    analyzeCustomers() {
-        throw new Error('Method not implemented.');
-    }
-
-    // Iniciar análise
     public async startAnalysis(): Promise<void> {
-        try {
-            // Debug primeiro
-            await this.debugCollections();
+        console.log('🚀 CustomerImport: Botão de análise clicado');
 
+        // Evitar análises duplicadas
+        if (this.isAnalyzing) {
+            console.log('⚠️ CustomerImport: Análise já em andamento');
+            return;
+        }
+
+        try {
+            this.isAnalyzing = true;
             this.currentStep = 'analyzing';
-            await this.customerImportService.analyzeCustomers();
+            console.log('📍 CustomerImport: Step mudado para analyzing');
+
+            // Limpar resultados anteriores
+            this.analysisResults = [];
+            this.allAnalysisResults = [];
+            this.selectedCustomers.clear();
+
+            // Chamar o serviço
+            console.log('🔄 CustomerImport: Chamando serviço de análise...');
+            const result = await this.customerImportService.analyzeCustomers();
+
+            console.log('✅ CustomerImport: Serviço retornou:', result?.length || 0, 'resultados');
+
+            // Se o serviço retornar os resultados diretamente (sem usar Subject)
+            if (result && result.length > 0 && this.analysisResults.length === 0) {
+                console.log('📊 CustomerImport: Processando resultado direto do serviço');
+                this.analysisResults = result;
+                this.allAnalysisResults = [...result];
+                this.currentStep = 'selection';
+                this.calculateStats();
+                this.applyFilters();
+                this.isAnalyzing = false;
+            } else if (result && result.length === 0) {
+                console.log('⚠️ CustomerImport: Nenhum cliente encontrado');
+                this.alertService.alert('Nenhum cliente encontrado para análise', 'warning');
+                this.currentStep = 'start';
+                this.isAnalyzing = false;
+            }
+            // Se usar Subject, o subscribe acima cuidará do resto
+
         } catch (error) {
-            this.alertService.alert('Erro ao analisar clientes', 'error');
+            console.error('❌ CustomerImport: Erro na análise:', error);
+            this.alertService.alert('Erro ao analisar clientes. Por favor, tente novamente.', 'error');
             this.currentStep = 'start';
+            this.isAnalyzing = false;
         }
     }
 
-    // Calcular estatísticas
+    /**
+     * Calcular estatísticas
+     */
     private calculateStats(): void {
-        // IMPORTANTE: usar allAnalysisResults para as estatísticas
+        console.log('📊 CustomerImport: Calculando estatísticas...');
         const allResults = this.allAnalysisResults;
 
         this.stats = {
@@ -221,186 +201,247 @@ export class CustomerImportComponent implements OnInit, OnDestroy {
             newCustomers: allResults.filter(c => c.category === 'new').length,
             totalValue: allResults.reduce((sum, c) => sum + c.totalSpent, 0),
             averageScore: allResults.length > 0
-                ? Math.round(allResults.reduce((sum, c) => sum + c.score, 0) / allResults.length)
+                ? allResults.reduce((sum, c) => sum + c.score, 0) / allResults.length
                 : 0
         };
+
+        console.log('📊 CustomerImport: Estatísticas calculadas:', this.stats);
     }
 
-    // Aplicar filtros e ordenação
-    public applyFiltersAndSort(): void {
-        // IMPORTANTE: sempre começar com TODOS os resultados
+    /**
+     * Aplicar filtros
+     */
+    public applyFilters(): void {
         let filtered = [...this.allAnalysisResults];
 
-        // Filtro por categoria
+        // Filtro de categoria
         if (this.filterCategory !== 'all') {
             filtered = filtered.filter(c => c.category === this.filterCategory);
         }
 
-        // Filtro por prioridade
+        // Filtro de prioridade
         if (this.filterPriority !== 'all') {
             filtered = filtered.filter(c => c.priority === this.filterPriority);
         }
 
-        // Filtro por busca
-        if (this.searchTerm) {
+        // Filtro de busca
+        if (this.searchTerm.trim()) {
             const search = this.searchTerm.toLowerCase();
             filtered = filtered.filter(c =>
                 c.customerName.toLowerCase().includes(search) ||
-                c.email.toLowerCase().includes(search) ||
-                c.phone.includes(search)
+                (c.email && c.email.toLowerCase().includes(search))
             );
         }
 
-        // Ordenação
-        filtered.sort((a, b) => {
-            let comparison = 0;
-
-            switch (this.sortBy) {
-                case 'score':
-                    comparison = a.score - b.score;
-                    break;
-                case 'value':
-                    comparison = a.totalSpent - b.totalSpent;
-                    break;
-                case 'recent':
-                    comparison = a.daysSinceLastPurchase - b.daysSinceLastPurchase;
-                    break;
-            }
-
-            return this.sortOrder === 'asc' ? comparison : -comparison;
-        });
-
-        // Atualizar a lista filtrada
         this.analysisResults = filtered;
+        console.log('🔍 CustomerImport: Filtros aplicados, mostrando', filtered.length, 'de', this.allAnalysisResults.length);
     }
 
-    // Alternar seleção
-    public toggleSelection(customerId: string): void {
+    /**
+     * Obter resultados filtrados
+     */
+    public getFilteredResults(): ICustomerAnalysis[] {
+        return this.analysisResults;
+    }
+
+    /**
+     * Toggle seleção de cliente
+     */
+    public toggleCustomerSelection(customerId: string): void {
         if (this.selectedCustomers.has(customerId)) {
             this.selectedCustomers.delete(customerId);
         } else {
             this.selectedCustomers.add(customerId);
         }
 
-        // Verificar se todos estão selecionados
-        this.selectAll = this.selectedCustomers.size === this.analysisResults.length;
+        this.updateSelectAllState();
     }
 
-    // Selecionar/Deselecionar todos
+    /**
+     * Toggle selecionar todos
+     */
     public toggleSelectAll(): void {
         if (this.selectAll) {
-            this.selectedCustomers.clear();
-        } else {
-            this.analysisResults.forEach(customer => {
+            this.getFilteredResults().forEach(customer => {
                 this.selectedCustomers.add(customer.customerId);
             });
+        } else {
+            this.selectedCustomers.clear();
         }
-        this.selectAll = !this.selectAll;
     }
 
-    // Selecionar por categoria
-    public selectByCategory(category: string): void {
-        this.analysisResults
-            .filter(c => c.category === category)
-            .forEach(c => this.selectedCustomers.add(c.customerId));
+    /**
+     * Atualizar estado do checkbox "selecionar todos"
+     */
+    private updateSelectAllState(): void {
+        const visibleResults = this.getFilteredResults();
+        const allSelected = visibleResults.length > 0 &&
+            visibleResults.every(c => this.selectedCustomers.has(c.customerId));
+
+        this.selectAll = allSelected;
     }
 
-    // Importar selecionados
+    /**
+     * Selecionar todos os visíveis
+     */
+    public selectAllVisible(): void {
+        this.getFilteredResults().forEach(customer => {
+            this.selectedCustomers.add(customer.customerId);
+        });
+        this.selectAll = true;
+    }
+
+    /**
+     * Limpar seleção
+     */
+    public clearSelection(): void {
+        this.selectedCustomers.clear();
+        this.selectAll = false;
+    }
+
+    /**
+     * Importar selecionados
+     */
     public async importSelected(): Promise<void> {
         if (this.selectedCustomers.size === 0) {
-            this.alertService.alert('Selecione pelo menos um cliente para importar', 'warning');
+            this.alertService.alert('Selecione pelo menos um cliente', 'warning');
             return;
         }
 
-        const selectedAnalyses = this.analysisResults.filter(c =>
-            this.selectedCustomers.has(c.customerId)
-        );
-
         const confirm = await this.alertService.confirm(
-            `Importar ${selectedAnalyses.length} cliente(s) como leads?`,
-            'Esta ação criará novos leads no CRM'
+            'Confirmar Importação',
+            `Deseja importar ${this.selectedCustomers.size} cliente(s) selecionado(s)?`
         );
 
-        if (confirm.isConfirmed) {
-            try {
-                await this.customerImportService.importSelectedCustomers(selectedAnalyses);
-                this.onImportComplete.emit(selectedAnalyses.length);
-            } catch (error) {
-                this.alertService.alert('Erro ao importar clientes', 'error');
-            }
+        if (!confirm.value) return;
+
+        try {
+            this.currentStep = 'importing';
+
+            const selectedAnalyses = this.allAnalysisResults.filter(
+                a => this.selectedCustomers.has(a.customerId)
+            );
+
+            await this.customerImportService.importSelectedCustomers(selectedAnalyses);
+
+            this.onImportComplete.emit(selectedAnalyses.length);
+
+        } catch (error) {
+            console.error('Erro na importação:', error);
+            this.alertService.alert('Erro ao importar clientes', 'error');
+            this.currentStep = 'selection';
         }
     }
 
-    // Voltar para leads
-    public backToLeads(): void {
-        this.onClose.emit();
+    /**
+     * Visualizar detalhes do cliente
+     */
+    public viewCustomerDetails(analysis: ICustomerAnalysis): void {
+        console.log('🔍 Visualizando detalhes do cliente:', analysis.customerName);
+
+        this.selectedCustomerForDetails = analysis;
+
+        try {
+            const service: any = this.customerImportService;
+            const rawData = service.getCustomerRawData ?
+                service.getCustomerRawData(analysis.customerId) : null;
+
+            if (rawData) {
+                this.selectedCustomerRawData = rawData;
+                console.log('✅ Dados brutos encontrados:', rawData.orders?.length, 'orders');
+            } else {
+                this.selectedCustomerRawData = {
+                    _id: analysis.customerId,
+                    name: analysis.customerName,
+                    email: analysis.email,
+                    phone: analysis.phone,
+                    orders: []
+                };
+                console.log('⚠️ Dados brutos não encontrados, modal buscará diretamente');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar dados brutos:', error);
+            this.selectedCustomerRawData = {
+                _id: analysis.customerId,
+                name: analysis.customerName,
+                email: analysis.email,
+                phone: analysis.phone,
+                orders: []
+            };
+        }
     }
 
-    // Formatar moeda
+    /**
+     * Fechar modal de detalhes
+     */
+    public closeCustomerDetails(): void {
+        this.selectedCustomerForDetails = null;
+        this.selectedCustomerRawData = null;
+    }
+
+    /**
+     * Obter label da categoria
+     */
+    public getCategoryLabel(category: string): string {
+        const labels = {
+            'hot': '🔥 Hot',
+            'warm': '☀️ Warm',
+            'cold': '❄️ Cold',
+            'new': '🆕 Novo'
+        };
+        return labels[category] || category;
+    }
+
+    /**
+     * Obter label da coleção
+     */
+    public getCollectionLabel(collection: string): string {
+        const labels = {
+            'CashierSales': 'Vendas PDV',
+            'Sales': 'Vendas',
+            'ServiceOrders': 'Ordens de Serviço',
+            'Requests': 'Pedidos'
+        };
+        return labels[collection] || collection;
+    }
+
+    /**
+     * Formatar moeda
+     */
     public formatCurrency(value: number): string {
+        if (!value) return 'R$ 0,00';
         return new Intl.NumberFormat('pt-BR', {
             style: 'currency',
             currency: 'BRL'
-        }).format(value || 0);
+        }).format(value);
     }
 
-    // Obter cor da categoria
-    public getCategoryColor(category: string): string {
-        switch (category) {
-            case 'hot': return 'danger';
-            case 'warm': return 'warning';
-            case 'cold': return 'primary';
-            case 'new': return 'success';
-            default: return 'secondary';
-        }
+    /**
+     * Formatar data
+     */
+    public formatDate(date: Date | string): string {
+        if (!date) return 'N/A';
+
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+
+        return new Intl.DateTimeFormat('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        }).format(dateObj);
     }
 
-    // Obter ícone da categoria
-    public getCategoryIcon(category: string): string {
-        switch (category) {
-            case 'hot': return 'flame-outline';
-            case 'warm': return 'thermometer-outline';
-            case 'cold': return 'snow-outline';
-            case 'new': return 'star-outline';
-            default: return 'help-outline';
-        }
-    }
+    /**
+     * Fechar componente
+     */
+    public close(): void {
+        console.log('🔴 CustomerImport: Método close() chamado');
 
-    // Obter label da categoria
-    public getCategoryLabel(category: string): string {
-        switch (category) {
-            case 'hot': return 'Quente';
-            case 'warm': return 'Morno';
-            case 'cold': return 'Frio';
-            case 'new': return 'Novo';
-            default: return category;
-        }
-    }
-
-    // Obter cor da prioridade
-    public getPriorityColor(priority: string): string {
-        switch (priority) {
-            case 'high': return 'danger';
-            case 'medium': return 'warning';
-            case 'low': return 'secondary';
-            default: return 'light';
-        }
-    }
-
-    // Obter porcentagem do progresso
-    public getProgressPercentage(): number {
-        if (this.importProgress.total === 0) return 0;
-        return Math.round((this.importProgress.current / this.importProgress.total) * 100);
-    }
-
-    // Mudar ordenação
-    public changeSort(sortBy: 'score' | 'value' | 'recent'): void {
-        if (this.sortBy === sortBy) {
-            this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+        // Só emitir close se não estiver no meio de uma operação
+        if (!this.isAnalyzing && this.currentStep !== 'importing') {
+            this.onClose.emit();
         } else {
-            this.sortBy = sortBy;
-            this.sortOrder = 'desc';
+            console.log('⚠️ CustomerImport: Tentativa de fechar durante operação bloqueada');
         }
-        this.applyFiltersAndSort();
     }
 }

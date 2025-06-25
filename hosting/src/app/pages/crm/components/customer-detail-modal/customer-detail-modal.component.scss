@@ -1,0 +1,820 @@
+// Arquivo: customer-detail-modal.component.scss
+// Localização: src/app/pages/crm/components/customer-detail-modal/customer-detail-modal.component.scss
+// Função: Estilos do modal de detalhes do cliente
+
+// ===========================
+// VARIÁVEIS
+// ===========================
+$primary-color: #007bff;
+$secondary-color: #6c757d;
+$success-color: #5cb85c;
+$warning-color: #f0ad4e;
+$danger-color: #dc3545;
+
+$text-primary: #333;
+$text-secondary: #666;
+$text-muted: #999;
+
+$bg-light: #f8f9fa;
+$bg-lighter: #fafafa;
+$bg-dark: #333;
+
+$border-color: #eee;
+$border-color-light: #e0e0e0;
+
+$shadow-md: 0 4px 20px rgba(0, 0, 0, 0.15);
+
+$radius-sm: 3px;
+$radius-md: 5px;
+$radius-lg: 8px;
+
+$spacing-xs: 5px;
+$spacing-sm: 10px;
+$spacing-md: 15px;
+$spacing-lg: 20px;
+$spacing-xl: 30px;
+
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease-out;
+
+// ===========================
+// MIXINS
+// ===========================
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@mixin button-base {
+    border: none;
+    cursor: pointer;
+    transition: all $transition-fast;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+// ===========================
+// MODAL OVERLAY
+// ===========================
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    @include flex-center;
+    padding: $spacing-lg;
+    animation: fadeIn $transition-fast;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+// ===========================
+// MODAL CONTENT
+// ===========================
+.modal-content {
+    background: white;
+    border-radius: $radius-lg;
+    width: 100%;
+    max-width: 1000px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: $shadow-md;
+    animation: slideIn $transition-normal;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ===========================
+// MODAL HEADER
+// ===========================
+.modal-header {
+    @include flex-between;
+    padding: $spacing-lg;
+    border-bottom: 1px solid $border-color;
+
+    h2 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-size: 20px;
+        color: $text-primary;
+
+        i {
+            color: $primary-color;
+        }
+    }
+
+    .close-btn {
+        @include button-base;
+        background: none;
+        font-size: 24px;
+        color: $text-secondary;
+        padding: $spacing-xs;
+        border-radius: $radius-sm;
+
+        &:hover {
+            color: $text-primary;
+            background: $bg-light;
+        }
+    }
+}
+
+// ===========================
+// CUSTOMER INFO
+// ===========================
+.customer-info {
+    padding: $spacing-lg;
+    background: $bg-light;
+    border-bottom: 1px solid $border-color;
+
+    h3 {
+        margin: 0 0 $spacing-md 0;
+        color: $text-primary;
+        font-size: 18px;
+    }
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: $spacing-md;
+
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-xs;
+
+        label {
+            font-size: 12px;
+            color: $text-secondary;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        span {
+            font-size: 14px;
+            color: $text-primary;
+
+            &.mono {
+                font-family: 'Courier New', monospace;
+                background: $border-color;
+                padding: 2px 6px;
+                border-radius: $radius-sm;
+                font-size: 12px;
+                display: inline-block;
+            }
+
+            &.value {
+                font-weight: bold;
+                color: #2ecc71;
+            }
+        }
+    }
+}
+
+// ===========================
+// LOADING
+// ===========================
+.loading {
+    @include flex-center;
+    gap: $spacing-sm;
+    padding: 60px;
+    color: $text-secondary;
+
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// ===========================
+// TAB CONTENT
+// ===========================
+.tab-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: $spacing-lg;
+}
+
+// ===========================
+// SECTIONS
+// ===========================
+.summary-section,
+.analysis-section {
+    margin-bottom: $spacing-xl;
+
+    h3 {
+        margin: 0 0 $spacing-lg 0;
+        color: $text-primary;
+        font-size: 18px;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+    }
+}
+
+// ===========================
+// COLLECTION GROUP
+// ===========================
+.collection-group {
+    margin-bottom: 25px;
+    border: 1px solid $border-color-light;
+    border-radius: $radius-lg;
+    padding: $spacing-lg;
+    background: $bg-lighter;
+
+    h4 {
+        margin: 0 0 $spacing-md 0;
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        color: $text-primary;
+        font-size: 16px;
+
+        .count {
+            font-size: 14px;
+            color: $text-secondary;
+            font-weight: normal;
+        }
+    }
+}
+
+.summary-stats {
+    display: flex;
+    gap: $spacing-xl;
+    margin-bottom: $spacing-lg;
+    padding: $spacing-md;
+    background: white;
+    border-radius: $radius-md;
+
+    .stat {
+        display: flex;
+        flex-direction: column;
+        gap: $spacing-xs;
+
+        label {
+            font-size: 12px;
+            color: $text-secondary;
+            text-transform: uppercase;
+        }
+
+        .value {
+            font-weight: 600;
+            color: #2ecc71;
+        }
+    }
+}
+
+// ===========================
+// ORDERS TABLE
+// ===========================
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: $radius-md;
+    overflow: hidden;
+
+    th {
+        background: #f0f0f0;
+        padding: $spacing-sm;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 600;
+        color: $text-secondary;
+        text-transform: uppercase;
+    }
+
+    td {
+        padding: $spacing-sm;
+        border-top: 1px solid $border-color;
+        font-size: 14px;
+
+        &.value {
+            font-weight: 600;
+            color: #2ecc71;
+        }
+    }
+}
+
+.customer-name {
+    display: block;
+    font-weight: 500;
+    color: $text-primary;
+}
+
+.customer-id,
+.customer-code {
+    display: inline-block;
+    font-size: 11px;
+    color: $text-secondary;
+    margin-right: $spacing-sm;
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+}
+
+.more-info {
+    text-align: center;
+    padding: $spacing-sm;
+    color: $text-secondary;
+    font-style: italic;
+    font-size: 14px;
+}
+
+// ===========================
+// PROBLEM CARDS
+// ===========================
+.problem-card {
+    border: 1px solid $warning-color;
+    background: #fcf8e3;
+    padding: $spacing-lg;
+    border-radius: $radius-lg;
+    margin-bottom: $spacing-lg;
+
+    &.success {
+        border-color: $success-color;
+        background: #dff0d8;
+    }
+
+    h5 {
+        margin: 0 0 $spacing-sm 0;
+        color: $text-primary;
+        font-size: 16px;
+    }
+
+    p {
+        margin: 0 0 $spacing-sm 0;
+        color: $text-secondary;
+    }
+
+    ul {
+        margin: $spacing-sm 0 0 $spacing-lg;
+        padding: 0;
+
+        li {
+            margin: $spacing-xs 0;
+            color: $text-secondary;
+        }
+    }
+}
+
+// ===========================
+// BUTTONS
+// ===========================
+.btn {
+    @include button-base;
+    padding: $spacing-sm $spacing-lg;
+    border-radius: $radius-md;
+    font-size: 14px;
+
+    &-secondary {
+        background: $secondary-color;
+        color: white;
+
+        &:hover {
+            background: darken($secondary-color, 10%);
+        }
+    }
+
+    &-primary {
+        background: $primary-color;
+        color: white;
+
+        &:hover {
+            background: darken($primary-color, 10%);
+        }
+    }
+}
+
+// ===========================
+// RAW DATA
+// ===========================
+.raw-data {
+    background: $bg-dark;
+    color: white;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    overflow-x: auto;
+    font-size: 12px;
+    margin-top: $spacing-md;
+    max-height: 300px;
+    font-family: 'Courier New', monospace;
+}
+
+// ===========================
+// MODAL FOOTER
+// ===========================
+.modal-footer {
+    @include flex-between;
+    padding: $spacing-lg;
+    border-top: 1px solid $border-color;
+    background: $bg-light;
+}
+
+// ===========================
+// ICON COLORS
+// ===========================
+.eva-shopping-cart-outline {
+    color: #3498db;
+}
+
+.eva-briefcase-outline {
+    color: #9b59b6;
+}
+
+.eva-settings-2-outline {
+    color: #27ae60;
+}
+
+.eva-file-text-outline {
+    color: #e67e22;
+}
+
+// ===========================
+// RESPONSIVE
+// ===========================
+@media (max-width: 768px) {
+    .modal-content {
+        max-height: 100vh;
+        border-radius: 0;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .summary-stats {
+        flex-direction: column;
+        gap: $spacing-md;
+    }
+
+    .orders-table {
+        font-size: 12px;
+
+        th,
+        td {
+            padding: 8px;
+        }
+    }
+
+    .modal-footer {
+        flex-direction: column;
+        gap: $spacing-sm;
+
+        .btn {
+            width: 100%;
+        }
+    }
+}
+
+// ===========================
+// SEÇÃO DE FILTROS
+// ===========================
+.filters-section {
+    display: flex;
+    gap: $spacing-md;
+    margin-bottom: $spacing-lg;
+
+    select,
+    input[type="text"] {
+        flex: 1;
+        padding: $spacing-sm $spacing-md;
+        border: 1px solid $border-color;
+        border-radius: $radius-md;
+        font-size: 14px;
+        transition: all $transition-fast;
+
+        &:focus {
+            outline: none;
+            border-color: $primary-color;
+            box-shadow: 0 0 0 3px rgba($primary-color, 0.1);
+        }
+    }
+
+    select {
+        cursor: pointer;
+    }
+}
+
+// ===========================
+// LISTA DE VENDAS DETALHADAS
+// ===========================
+.orders-list {
+    max-height: 600px;
+    overflow-y: auto;
+    padding-right: $spacing-sm;
+
+    // Scrollbar customizada
+    &::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: $bg-light;
+        border-radius: 3px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: $border-color;
+        border-radius: 3px;
+
+        &:hover {
+            background: darken($border-color, 10%);
+        }
+    }
+}
+
+.order-item {
+    border: 1px solid $border-color;
+    border-radius: $radius-md;
+    margin-bottom: $spacing-md;
+    overflow: hidden;
+    transition: all $transition-fast;
+
+    &:hover {
+        border-color: $primary-color;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+}
+
+.order-header {
+    padding: $spacing-md;
+    background: $bg-light;
+    cursor: pointer;
+    @include flex-between;
+    transition: background $transition-fast;
+
+    &:hover {
+        background: darken($bg-light, 2%);
+    }
+
+    .order-info {
+        display: flex;
+        align-items: center;
+        gap: $spacing-md;
+
+        .order-number {
+            font-weight: 600;
+            color: $primary-color;
+        }
+
+        .order-date {
+            color: $text-secondary;
+            font-size: 13px;
+        }
+
+        .order-collection {
+            background: white;
+            padding: 2px 8px;
+            border-radius: $radius-sm;
+            font-size: 12px;
+            color: $text-secondary;
+            border: 1px solid $border-color;
+        }
+    }
+
+    .order-value {
+        display: flex;
+        align-items: center;
+        gap: $spacing-sm;
+        font-weight: 600;
+        color: $success-color;
+
+        i {
+            color: $text-secondary;
+            transition: transform $transition-fast;
+        }
+    }
+}
+
+.order-details {
+    padding: $spacing-lg;
+    background: white;
+    border-top: 1px solid $border-color;
+    animation: slideDown $transition-normal;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// ===========================
+// SEÇÕES DE DETALHES
+// ===========================
+.detail-section {
+    margin-bottom: $spacing-lg;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    h4 {
+        font-size: 15px;
+        margin-bottom: $spacing-sm;
+        color: $text-primary;
+        display: flex;
+        align-items: center;
+        gap: $spacing-xs;
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: $spacing-md;
+
+        >div {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+
+            label {
+                font-size: 12px;
+                color: $text-secondary;
+                font-weight: 500;
+            }
+
+            span {
+                font-size: 14px;
+                color: $text-primary;
+
+                &.mono {
+                    font-family: monospace;
+                    background: $bg-light;
+                    padding: 2px 6px;
+                    border-radius: $radius-sm;
+                    font-size: 13px;
+                }
+            }
+        }
+    }
+}
+
+// ===========================
+// TABELAS DE PRODUTOS E SERVIÇOS
+// ===========================
+.products-table,
+.services-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+
+    thead {
+        background: $bg-light;
+
+        th {
+            padding: $spacing-sm;
+            text-align: left;
+            font-weight: 600;
+            color: $text-secondary;
+            font-size: 13px;
+            border-bottom: 1px solid $border-color;
+        }
+    }
+
+    tbody {
+        tr {
+            &:hover {
+                background: $bg-lighter;
+            }
+
+            td {
+                padding: $spacing-sm;
+                border-bottom: 1px solid $border-color-light;
+            }
+
+            &:last-child td {
+                border-bottom: none;
+            }
+        }
+    }
+}
+
+// ===========================
+// LISTA DE PAGAMENTOS
+// ===========================
+.payment-list {
+    display: flex;
+    flex-direction: column;
+    gap: $spacing-sm;
+
+    .payment-item {
+        @include flex-between;
+        padding: $spacing-sm;
+        background: $bg-light;
+        border-radius: $radius-sm;
+        font-size: 14px;
+
+        span:last-child {
+            font-weight: 600;
+            color: $primary-color;
+        }
+    }
+}
+
+// ===========================
+// DEBUG INFO
+// ===========================
+.debug-info {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: $spacing-md;
+    border-radius: $radius-md;
+    font-size: 12px;
+    overflow-x: auto;
+    max-height: 300px;
+}
+
+.debug-buttons {
+    display: flex;
+    gap: $spacing-sm;
+    margin-top: $spacing-md;
+}
+
+// ===========================
+// MENSAGEM SEM VENDAS
+// ===========================
+.no-orders {
+    text-align: center;
+    padding: $spacing-xl * 2;
+    color: $text-secondary;
+
+    i {
+        font-size: 48px;
+        opacity: 0.3;
+        margin-bottom: $spacing-md;
+    }
+
+    p {
+        font-size: 16px;
+    }
+}
+
+// ===========================
+// RESPONSIVIDADE
+// ===========================
+@media (max-width: 768px) {
+    .filters-section {
+        flex-direction: column;
+    }
+
+    .order-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: $spacing-sm;
+
+        .order-info {
+            flex-wrap: wrap;
+        }
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-content {
+        max-width: 95%;
+        margin: $spacing-sm;
+    }
+}
