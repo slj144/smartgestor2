@@ -443,23 +443,33 @@ export class CustomerDetailModalComponent implements OnInit {
     }
 
     /**
-     * Alternar exibição dos detalhes de uma order
-     */
+  * Alternar detalhes da ordem
+  */
     public toggleOrderDetails(index: number): void {
-        if (this.filteredOrders[index]) {
-            this.filteredOrders[index].showDetails = !this.filteredOrders[index].showDetails;
+        this.filteredOrders[index].showDetails = !this.filteredOrders[index].showDetails;
+    }
 
-            // Log para debug quando abrir detalhes
-            if (this.filteredOrders[index].showDetails) {
-                console.log('📋 Detalhes da venda:', {
-                    index: index,
-                    order: this.filteredOrders[index],
-                    products: this.filteredOrders[index].products,
-                    services: this.filteredOrders[index].services,
-                    paymentMethods: this.filteredOrders[index].paymentMethods
-                });
-            }
-        }
+    /**
+     * Calcular valor total das vendas filtradas
+     */
+    public getTotalValue(): number {
+        return this.filteredOrders.reduce((sum, order) => sum + (order.total || order.value || 0), 0);
+    }
+
+    /**
+     * Obter data da primeira venda
+     */
+    public getFirstSaleDate(): Date {
+        if (!this.filteredOrders.length) return new Date();
+        return this.filteredOrders[this.filteredOrders.length - 1].date;
+    }
+
+    /**
+     * Obter data da última venda
+     */
+    public getLastSaleDate(): Date {
+        if (!this.filteredOrders.length) return new Date();
+        return this.filteredOrders[0].date;
     }
 
     /**
@@ -824,6 +834,7 @@ export class CustomerDetailModalComponent implements OnInit {
         a.click();
         window.URL.revokeObjectURL(url);
     }
+
 
     /**
      * Fechar modal

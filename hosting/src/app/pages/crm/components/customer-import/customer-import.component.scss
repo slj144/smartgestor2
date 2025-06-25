@@ -87,6 +87,7 @@ $transition-normal: 0.3s ease;
     font-size: $size;
     width: $size;
     height: $size;
+
 }
 
 @mixin text-truncate {
@@ -781,6 +782,330 @@ $transition-normal: 0.3s ease;
 
         p {
             font-size: 16px;
+        }
+    }
+}
+
+// ===========================
+// MELHORIAS DE UX - ÍCONES
+// ===========================
+
+// Labels com ícones
+.filter-group {
+    label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        i {
+            font-size: 16px;
+            color: $primary-color;
+            opacity: 0.7;
+        }
+    }
+
+    // Checkbox customizado
+    &.checkbox-label {
+        label {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: $radius-sm;
+            transition: all $transition-fast;
+
+            &:hover {
+                background: $bg-primary;
+            }
+
+            input[type="checkbox"] {
+                margin-right: 8px;
+            }
+        }
+    }
+}
+
+// Melhorias nos botões de ação em massa
+.bulk-actions {
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+
+        i {
+            font-size: 18px;
+        }
+    }
+}
+
+// Header da tabela com ícones
+.results-table {
+    th {
+        i {
+            margin-right: 6px;
+            font-size: 16px;
+            opacity: 0.7;
+            vertical-align: middle;
+        }
+    }
+}
+
+// Informações do cliente com ícones
+.customer-info {
+
+    .customer-name,
+    .customer-email,
+    .customer-phone {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 2px 0;
+
+        i {
+            font-size: 14px;
+            opacity: 0.6;
+            color: $text-secondary;
+        }
+    }
+}
+
+// Células com ícones
+td {
+    &.text-right {
+        i {
+            margin-right: 4px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+    }
+
+    .purchase-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+
+        i {
+            font-size: 16px;
+            opacity: 0.6;
+        }
+    }
+
+    .last-purchase-date {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        i {
+            font-size: 14px;
+            opacity: 0.6;
+        }
+    }
+}
+
+// Botão de detalhes melhorado
+.action-btn {
+    &.view-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: $radius-sm;
+        background: $primary-color;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: all $transition-fast;
+
+        &:hover {
+            background: darken($primary-color, 10%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba($primary-color, 0.3);
+        }
+
+        i {
+            font-size: 16px;
+        }
+    }
+}
+
+// Header de resultados melhorado
+.results-header {
+    h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        i {
+            font-size: 20px;
+            color: $primary-color;
+        }
+    }
+}
+
+// Estado vazio melhorado
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+
+    i {
+        font-size: 64px;
+        color: $text-muted;
+        opacity: 0.3;
+        margin-bottom: 16px;
+    }
+
+    h3 {
+        font-size: 20px;
+        color: $text-primary;
+        margin: 0 0 8px 0;
+    }
+
+    p {
+        color: $text-secondary;
+        font-size: 16px;
+    }
+}
+
+// Melhorias na seção de progresso
+.progress-info {
+    span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        i {
+            font-size: 18px;
+            opacity: 0.8;
+        }
+    }
+}
+
+// Summary items com ícones
+.summary-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+
+    i {
+        font-size: 24px;
+        color: $primary-color;
+    }
+
+    span {
+        flex: 1;
+        font-size: 16px;
+        color: $text-primary;
+    }
+}
+
+// Animação para ícones de loading
+@keyframes pulse-icon {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.6;
+        transform: scale(0.95);
+    }
+}
+
+.importing-section {
+    h3 {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+
+        i {
+            font-size: 24px;
+            animation: pulse-icon 2s ease-in-out infinite;
+        }
+    }
+}
+
+// Melhorias gerais nos botões
+.btn {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px;
+
+    i {
+        font-size: 18px;
+        transition: transform $transition-fast;
+    }
+
+    &:hover:not(:disabled) {
+        i {
+            transform: scale(1.1);
+        }
+    }
+}
+
+// Select com visual melhorado
+select {
+    padding-left: 12px !important;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath fill='%23666' d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px !important;
+}
+
+// Linha selecionada na tabela
+tr.selected {
+    background: rgba($primary-color, 0.05);
+
+    td {
+        font-weight: 500;
+    }
+}
+
+// Score melhorado
+.score-text {
+    font-weight: 600;
+    color: $primary-color;
+    margin-left: 8px;
+}
+
+// Responsivo
+@media (max-width: 768px) {
+
+    // Esconder texto dos botões, manter apenas ícones
+    .btn {
+        span.btn-text {
+            display: none;
+        }
+
+        i {
+            margin: 0;
+        }
+    }
+
+    // Ajustar tabela
+    .results-table {
+
+        th,
+        td {
+            i {
+                display: none; // Esconder ícones em mobile para economizar espaço
+            }
+        }
+    }
+
+    // Botão de detalhes apenas com ícone
+    .action-btn.view-btn {
+        padding: 8px;
+
+        // Esconder texto em mobile
+        font-size: 0;
+
+        i {
+            font-size: 18px;
+            margin: 0;
         }
     }
 }
