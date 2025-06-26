@@ -23,6 +23,7 @@ export class ActivityBellComponent implements OnInit {
     }
 
     view(activityId: string): void {
-        this.pendingService.markAsViewed(activityId);
+        // A lista não remove a atividade ao visualizar
+        this.showList = false;
     }
 }
