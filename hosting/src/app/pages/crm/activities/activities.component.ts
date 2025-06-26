@@ -981,6 +981,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
         activityTitle: activity.title,
         activityDescription: activity.description,
         activityId: activity._id,
+        activityType: activity.type,
         category: templateCategory, // ✅ Usando o método correto
         businessType: businessType,
         products,
@@ -1352,10 +1353,13 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
 
   // ✅ VERIFICAR SE DEVE COMPLETAR ATIVIDADE AUTOMATICAMENTE
   private shouldCompleteActivity(customer: any): boolean {
-    // Completar automaticamente se for pós-venda ou follow-up
-    return customer.category === 'follow-up' ||
-      customer.category === 'pos-venda' ||
-      customer.activityType === 'whatsapp';
+    // Completar automaticamente se for follow-up, pós-venda ou qualquer WhatsApp
+    const isFollowUp = customer.category === 'follow-up';
+    const isPosVenda = customer.category === 'pos-venda' ||
+      customer.category?.startsWith('pos-venda');
+    const isWhats = customer.activityType === 'whatsapp';
+
+    return isFollowUp || isPosVenda || isWhats;
   }
 
   // ✅ OBTER CATEGORIA PARA FILTRO DE TEMPLATES
