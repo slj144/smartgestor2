@@ -12,7 +12,7 @@
  * - Interface para copiar dados de acesso das instâncias
  */
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { iTools } from '../../../assets/tools/iTools';
 import { SuperAdminAuthService } from './super-admin-auth.service';
@@ -22,7 +22,7 @@ import { SuperAdminAuthService } from './super-admin-auth.service';
     templateUrl: './super-admin.component.html',
     styleUrls: ['./super-admin.component.scss']
 })
-export class SuperAdminComponent implements OnInit {
+export class SuperAdminComponent implements OnInit, OnDestroy {
 
     // Dados da nova instância
     novaInstancia = {
@@ -133,6 +133,26 @@ export class SuperAdminComponent implements OnInit {
     contadorAtivas = 0;
     contadorInativas = 0;
 
+    // === PROPRIEDADES DO MONITOR ===
+
+    // Controle de abas
+    abaAtiva: 'instancias' | 'monitor' = 'instancias';
+
+    // Dados do monitor
+    monitorData = {
+        totalRequests: 0,
+        activeWebSockets: 0,
+        totalErrors: 0,
+        errorRate: 0,
+        tenantsMetrics: [] as any[],
+        slowOperations: [] as any[],
+        systemHealth: 'good' as 'good' | 'warning' | 'critical'
+    };
+
+    // Monitor em tempo real
+    monitorInterval: any;
+    monitorStartTime = new Date();
+
     constructor(
         private http: HttpClient,
         private authService: SuperAdminAuthService
@@ -141,6 +161,16 @@ export class SuperAdminComponent implements OnInit {
     ngOnInit(): void {
         console.log('Super Admin carregado!');
         this.buscarInstancias();
+
+        // Iniciar monitor se estiver na aba
+        if (this.abaAtiva === 'monitor') {
+            this.iniciarMonitor();
+        }
+    }
+
+    ngOnDestroy(): void {
+        // Parar monitor
+        this.pararMonitor();
     }
 
     // Realiza o logout
@@ -941,12 +971,12 @@ export class SuperAdminComponent implements OnInit {
     // Copia todos os dados de acesso
     copiarDadosAcesso() {
         const dados = `
- URL: ${this.dadosAcesso.url}
- Usuário: matrixadmin
- Senha: 21211212
- 
- Atenção: Altere a senha no primeiro acesso!
-         `.trim();
+  URL: ${this.dadosAcesso.url}
+  Usuário: matrixadmin
+  Senha: 21211212
+  
+  Atenção: Altere a senha no primeiro acesso!
+          `.trim();
 
         navigator.clipboard.writeText(dados).then(() => {
             this.mensagem = "Dados de acesso copiados com sucesso!";
@@ -1016,14 +1046,14 @@ export class SuperAdminComponent implements OnInit {
     // Copia informações completas
     copiarInfoCompleta() {
         const info = `
- Empresa: ${this.instanciaSelecionada.companyName}
- Project ID: ${this.instanciaSelecionada.projectId}
- URL: ${this.urlInstanciaSelecionada}
- 
- Login padrão:
- Usuário: matrixadmin
- Senha: 21211212
-         `.trim();
+  Empresa: ${this.instanciaSelecionada.companyName}
+  Project ID: ${this.instanciaSelecionada.projectId}
+  URL: ${this.urlInstanciaSelecionada}
+  
+  Login padrão:
+  Usuário: matrixadmin
+  Senha: 21211212
+          `.trim();
 
         navigator.clipboard.writeText(info).then(() => {
             this.mensagem = "Informações copiadas com sucesso!";
@@ -1414,5 +1444,308 @@ export class SuperAdminComponent implements OnInit {
         this.verificarCRM();
 
         alert('Cache limpo! Por favor, faça logout e login novamente para aplicar as mudanças.');
+    }
+
+    // === MÉTODOS DO MONITOR ===
+
+    // Alternar entre abas
+    mudarAba(aba: 'instancias' | 'monitor') {
+        this.abaAtiva = aba;
+
+        if (aba === 'monitor') {
+            this.iniciarMonitor();
+        } else {
+            this.pararMonitor();
+        }
+    }
+
+    // Iniciar monitoramento
+    iniciarMonitor() {
+        console.log('🚀 Iniciando monitor do Super Admin...');
+
+        // Injetar script de monitoramento em todas as instâncias
+        this.injetarMonitorGlobal();
+
+        // Atualizar dados a cada 5 segundos
+        this.monitorInterval = setInterval(() => {
+            this.atualizarDadosMonitor();
+        }, 5000);
+
+        // Primeira atualização
+        this.atualizarDadosMonitor();
+    }
+
+    // Parar monitoramento
+    pararMonitor() {
+        if (this.monitorInterval) {
+            clearInterval(this.monitorInterval);
+            this.monitorInterval = null;
+        }
+    }
+
+    // Injetar monitor global
+    injetarMonitorGlobal() {
+        // Script que monitora TODAS as requisições
+        const monitorScript = `
+             if (!window.SuperAdminMonitor) {
+                 window.SuperAdminMonitor = {
+                     requests: [],
+                     errors: 0,
+                     websockets: 0,
+                     tenantData: new Map()
+                 };
+                 
+                 // Interceptar Fetch
+                 const originalFetch = window.fetch;
+                 window.fetch = async function(...args) {
+                     const tenant = window.location.pathname.split('/')[1];
+                     const start = performance.now();
+                     
+                     try {
+                         const response = await originalFetch(...args);
+                         const duration = performance.now() - start;
+                         
+                         window.SuperAdminMonitor.requests.push({
+                             tenant: tenant,
+                             type: 'fetch',
+                             duration: duration,
+                             url: args[0],
+                             timestamp: new Date()
+                         });
+                         
+                         if (!response.ok) {
+                             window.SuperAdminMonitor.errors++;
+                         }
+                         
+                         return response;
+                     } catch (error) {
+                         window.SuperAdminMonitor.errors++;
+                         throw error;
+                     }
+                 };
+                 
+                 // Interceptar WebSocket
+                 const OriginalWebSocket = window.WebSocket;
+                 window.WebSocket = function(...args) {
+                     const ws = new OriginalWebSocket(...args);
+                     const tenant = window.location.pathname.split('/')[1];
+                     
+                     window.SuperAdminMonitor.websockets++;
+                     
+                     ws.addEventListener('close', () => {
+                         window.SuperAdminMonitor.websockets--;
+                     });
+                     
+                     ws.addEventListener('message', (event) => {
+                         try {
+                             const data = JSON.parse(event.data);
+                             if (data.error || (data.actionResult && !data.actionResult.status)) {
+                                 window.SuperAdminMonitor.errors++;
+                             }
+                         } catch (e) {}
+                     });
+                     
+                     return ws;
+                 };
+             }
+         `;
+
+        // Executar em todas as abas abertas
+        if (typeof (window as any).eval === 'function') {
+            (window as any).eval(monitorScript);
+        }
+    }
+
+    // Atualizar dados do monitor
+    atualizarDadosMonitor() {
+        // Coletar dados do monitor global
+        if ((window as any).SuperAdminMonitor) {
+            const monitor = (window as any).SuperAdminMonitor;
+
+            // Atualizar totais
+            this.monitorData.totalRequests = monitor.requests.length;
+            this.monitorData.totalErrors = monitor.errors;
+            this.monitorData.activeWebSockets = monitor.websockets;
+
+            // Calcular taxa de erro
+            this.monitorData.errorRate = this.monitorData.totalRequests > 0
+                ? (this.monitorData.totalErrors / this.monitorData.totalRequests) * 100
+                : 0;
+
+            // Agrupar por tenant
+            this.calcularMetricasPorTenant(monitor.requests);
+
+            // Identificar operações lentas
+            this.identificarOperacoesLentas(monitor.requests);
+
+            // Determinar saúde do sistema
+            this.determinarSaudeDoSistema();
+        }
+
+        // Buscar dados adicionais das instâncias
+        this.complementarDadosInstancias();
+    }
+
+    // Calcular métricas por tenant
+    calcularMetricasPorTenant(requests: any[]) {
+        const tenantMap = new Map();
+
+        requests.forEach(req => {
+            if (!tenantMap.has(req.tenant)) {
+                tenantMap.set(req.tenant, {
+                    tenant: req.tenant,
+                    requests: 0,
+                    totalTime: 0,
+                    errors: 0,
+                    avgResponseTime: 0
+                });
+            }
+
+            const data = tenantMap.get(req.tenant);
+            data.requests++;
+            data.totalTime += req.duration;
+        });
+
+        // Converter para array e calcular médias
+        this.monitorData.tenantsMetrics = Array.from(tenantMap.values()).map(data => {
+            data.avgResponseTime = data.requests > 0 ? data.totalTime / data.requests : 0;
+
+            // Encontrar nome da empresa
+            const instancia = this.instancias.find(i => i.projectId === data.tenant);
+            data.companyName = instancia?.companyName || data.tenant;
+            data.isPaid = instancia?.isPaid !== false;
+
+            return data;
+        }).sort((a, b) => b.requests - a.requests); // Ordenar por mais ativo
+    }
+
+    // Identificar operações lentas
+    identificarOperacoesLentas(requests: any[]) {
+        this.monitorData.slowOperations = requests
+            .filter(req => req.duration > 1000) // Mais de 1 segundo
+            .sort((a, b) => b.duration - a.duration)
+            .slice(0, 10) // Top 10 mais lentas
+            .map(req => ({
+                ...req,
+                durationFormatted: (req.duration / 1000).toFixed(2) + 's',
+                companyName: this.instancias.find(i => i.projectId === req.tenant)?.companyName || req.tenant
+            }));
+    }
+
+    // Determinar saúde do sistema
+    determinarSaudeDoSistema() {
+        if (this.monitorData.errorRate > 10) {
+            this.monitorData.systemHealth = 'critical';
+        } else if (this.monitorData.errorRate > 5 || this.monitorData.slowOperations.length > 5) {
+            this.monitorData.systemHealth = 'warning';
+        } else {
+            this.monitorData.systemHealth = 'good';
+        }
+    }
+
+    // Complementar com dados das instâncias
+    complementarDadosInstancias() {
+        // Para cada instância ativa, verificar se está no monitor
+        this.instancias.forEach(instancia => {
+            const metrica = this.monitorData.tenantsMetrics.find(m => m.tenant === instancia.projectId);
+
+            if (!metrica && instancia.isPaid !== false) {
+                // Instância ativa mas sem atividade
+                this.monitorData.tenantsMetrics.push({
+                    tenant: instancia.projectId,
+                    companyName: instancia.companyName,
+                    requests: 0,
+                    totalTime: 0,
+                    errors: 0,
+                    avgResponseTime: 0,
+                    isPaid: true,
+                    inactive: true
+                });
+            }
+        });
+    }
+
+    // Exportar relatório do monitor
+    exportarRelatorioMonitor() {
+        const relatorio = {
+            dataExportacao: new Date(),
+            periodoMonitoramento: {
+                inicio: this.monitorStartTime,
+                fim: new Date(),
+                duracaoMinutos: Math.round((new Date().getTime() - this.monitorStartTime.getTime()) / 60000)
+            },
+            resumoGeral: {
+                totalRequisicoes: this.monitorData.totalRequests,
+                totalErros: this.monitorData.totalErrors,
+                taxaErro: this.monitorData.errorRate.toFixed(2) + '%',
+                websocketsAtivos: this.monitorData.activeWebSockets,
+                saudeSistema: this.monitorData.systemHealth
+            },
+            metricasPorTenant: this.monitorData.tenantsMetrics,
+            operacoesLentas: this.monitorData.slowOperations,
+            recomendacoes: this.gerarRecomendacoes()
+        };
+
+        const blob = new Blob([JSON.stringify(relatorio, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `monitor-superadmin-${new Date().toISOString()}.json`;
+        a.click();
+    }
+
+    // Gerar recomendações automáticas
+    gerarRecomendacoes(): string[] {
+        const recomendacoes = [];
+
+        // Taxa de erro alta
+        if (this.monitorData.errorRate > 10) {
+            recomendacoes.push('⚠️ Taxa de erro crítica! Verificar logs do servidor urgentemente.');
+        } else if (this.monitorData.errorRate > 5) {
+            recomendacoes.push('⚠️ Taxa de erro elevada. Investigar possíveis problemas.');
+        }
+
+        // Operações lentas
+        if (this.monitorData.slowOperations.length > 5) {
+            recomendacoes.push('🐌 Muitas operações lentas detectadas. Considere otimizar queries ou adicionar índices.');
+        }
+
+        // Tenants inativos
+        const inativos = this.monitorData.tenantsMetrics.filter(t => t.inactive).length;
+        if (inativos > 5) {
+            recomendacoes.push(`💤 ${inativos} tenants sem atividade. Verificar se estão com problemas de acesso.`);
+        }
+
+        // Tenants com muitos erros
+        const tenantsComErros = this.monitorData.tenantsMetrics.filter(t => t.errors > 10);
+        if (tenantsComErros.length > 0) {
+            recomendacoes.push(`❌ ${tenantsComErros.length} tenants com muitos erros. Verificar individualmente.`);
+        }
+
+        // WebSockets
+        if (this.monitorData.activeWebSockets > 100) {
+            recomendacoes.push('🔌 Muitos WebSockets ativos. Implementar connection pooling pode ajudar.');
+        }
+
+        if (recomendacoes.length === 0) {
+            recomendacoes.push('✅ Sistema operando normalmente!');
+        }
+
+        return recomendacoes;
+    }
+
+    // Limpar dados do monitor
+    limparDadosMonitor() {
+        if ((window as any).SuperAdminMonitor) {
+            (window as any).SuperAdminMonitor = {
+                requests: [],
+                errors: 0,
+                websockets: 0,
+                tenantData: new Map()
+            };
+        }
+
+        this.monitorStartTime = new Date();
+        this.atualizarDadosMonitor();
     }
 }

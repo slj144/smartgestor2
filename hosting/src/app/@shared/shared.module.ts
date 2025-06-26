@@ -40,6 +40,7 @@ import { CalendarComponent } from './components/calendar/calendar.component';
 import { FiltersComponent } from './components/filters/filters.component';
 import { PlaceholderComponent } from './components/placeholder/placeholder.component';
 import { NotificationsComponent } from './components/notifications/notifications.component';
+import { ActivityBellComponent } from './components/activity-bell/activity-bell.component';
 
 import { SystemUpdateComponent } from './components/system-update/system-update.component';
 import { RegisterNfComponent } from '@pages/fiscal/components/modal/components/register/register.component';
@@ -102,6 +103,7 @@ import { CurrencyCustomPipe } from './pipes/currency.pipe';
     FiltersComponent,
     PlaceholderComponent,
     NotificationsComponent,
+    ActivityBellComponent,
     SystemUpdateComponent,
 
     EllipsisPipe,
@@ -111,7 +113,7 @@ import { CurrencyCustomPipe } from './pipes/currency.pipe';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    
+
     AngularEditorModule,
     TooltipModule,
 
@@ -143,7 +145,7 @@ import { CurrencyCustomPipe } from './pipes/currency.pipe';
     CustomersRegisterComponent,
     PartnersRegisterComponent,
     ServicesRegisterComponent,
-    
+
     VehiclesRegisterComponent,
     VehiclesRegisterLayerComponent,
 
@@ -156,6 +158,7 @@ import { CurrencyCustomPipe } from './pipes/currency.pipe';
     FiltersComponent,
     PlaceholderComponent,
     NotificationsComponent,
+    ActivityBellComponent,
     SystemUpdateComponent,
 
     EllipsisPipe,
