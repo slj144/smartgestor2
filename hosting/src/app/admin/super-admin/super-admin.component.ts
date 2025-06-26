@@ -1550,9 +1550,18 @@ export class SuperAdminComponent implements OnInit, OnDestroy {
              }
          `;
 
-        // Executar em todas as abas abertas
-        if (typeof (window as any).eval === 'function') {
-            (window as any).eval(monitorScript);
+        // Executar no contexto global da página sem depender de "eval"
+        // (alguns navegadores podem bloquear eval por política de segurança)
+        try {
+            const scriptEl = document.createElement('script');
+            scriptEl.id = 'super-admin-monitor-script';
+            scriptEl.text = monitorScript;
+            document.head.appendChild(scriptEl);
+        } catch (e) {
+            // Fallback para eval caso a criação dinâmica falhe
+            if (typeof (window as any).eval === 'function') {
+                (window as any).eval(monitorScript);
+            }
         }
     }
 
