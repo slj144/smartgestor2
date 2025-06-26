@@ -419,6 +419,9 @@ export class SuperAdminComponent implements OnInit {
 
         if (this.incluiFiscal) {
             profileData.fiscal = { active: true };
+        } else {
+            // Remover módulo fiscal caso exista
+            profileData.fiscal = iTools.FieldValue.unset();
         }
 
         // CORREÇÃO: Salvar no formato correto
@@ -427,6 +430,9 @@ export class SuperAdminComponent implements OnInit {
                 (this.incluiFiscal ? '/Fiscal' : ''),
             data: profileData  // ⬅️ IMPORTANTE: dados vão dentro de 'data'
         };
+        if (!this.incluiFiscal) {
+            (<any>updates.profile).fiscal = iTools.FieldValue.unset();
+        }
 
         updates.profileName = updates.profile.name;
 
@@ -840,6 +846,14 @@ export class SuperAdminComponent implements OnInit {
 
     // Gera projectId baseado no nome
     gerarProjectId() {
+        // Quando estamos editando uma instância existente o ProjectId não deve
+        // ser alterado automaticamente. A geração ocorre apenas para novas
+        // instâncias.
+        if (this.editandoInstancia) {
+            return;
+        }
+
+
         if (this.novaInstancia.companyName) {
             const id = this.novaInstancia.companyName
                 .toLowerCase()
