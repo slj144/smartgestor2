@@ -17,6 +17,9 @@ export class PendingActivitiesService {
         private crmService: CrmService,
         private notificationService: NotificationService
     ) {
+        // Iniciar escuta em tempo real das atividades
+        this.crmService.getActivities();
+
         this.crmService.activities$.subscribe((activities) => {
             this.updatePending(activities);
         });
