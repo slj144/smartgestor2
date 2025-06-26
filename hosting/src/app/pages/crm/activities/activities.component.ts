@@ -92,7 +92,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
     // Filtros existentes
     type: 'all',
     status: 'all',
-    dateFilter: 'all',
+    dateFilter: 'today',
     leadId: '',
 
     // NOVOS FILTROS
@@ -596,7 +596,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
     if (this.filters.status !== 'all') count++;
     if (this.filters.priority !== 'all') count++;
     if (this.filters.assignedTo !== 'all') count++;
-    if (this.filters.dateFilter !== 'all') count++;
+    if (this.filters.dateFilter !== 'all' && this.filters.dateFilter !== 'today') count++;
     if (this.filters.leadId) count++;
     if (this.filters.searchText && this.filters.searchText.trim() !== '') count++;
 
@@ -612,7 +612,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
     this.filters = {
       type: 'all',
       status: 'all',
-      dateFilter: 'all',
+      dateFilter: 'today',
       leadId: '',
       searchText: '',
       priority: 'all',
