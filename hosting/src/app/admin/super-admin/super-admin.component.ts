@@ -1042,7 +1042,41 @@ export class SuperAdminComponent implements OnInit, OnDestroy {
         this.mostrarModalAcesso = false;
         this.instanciaSelecionada = null;
     }
+    // Abre a instância em nova aba e injeta o monitor de requisições
+    acessarInstanciaComMonitor(instancia: any) {
+        if (!instancia || !instancia.projectId) {
+            console.error('Instância inválida para monitoramento', instancia);
+            return;
+        }
 
+        const url = `https://smartgestor.ipartts.com/${instancia.projectId}/login`;
+        const novaJanela = window.open(url, '_blank');
+
+        if (!novaJanela) {
+            console.error('Falha ao abrir nova aba. Verifique bloqueio de pop-ups.');
+            return;
+        }
+
+        const inject = () => {
+            try {
+                const scriptEl = novaJanela.document.createElement('script');
+                scriptEl.id = 'super-admin-monitor-script';
+                scriptEl.text = this.getMonitorScript();
+                novaJanela.document.head.appendChild(scriptEl);
+            } catch (e) {
+                console.error('Erro ao injetar monitor na nova janela', e);
+                if (typeof (novaJanela as any).eval === 'function') {
+                    (novaJanela as any).eval(this.getMonitorScript());
+                }
+            }
+        };
+
+        if (novaJanela.document.readyState === 'complete') {
+            inject();
+        } else {
+            novaJanela.addEventListener('load', inject);
+        }
+    }
     // Copia informações completas
     copiarInfoCompleta() {
         const info = `
@@ -1485,8 +1519,26 @@ export class SuperAdminComponent implements OnInit, OnDestroy {
 
     // Injetar monitor global
     injetarMonitorGlobal() {
-        // Script que monitora TODAS as requisições
-        const monitorScript = `
+        const monitorScript = this.getMonitorScript();
+
+        // Executar no contexto global da página sem depender de "eval"
+        // (alguns navegadores podem bloquear eval por política de segurança)
+        try {
+            const scriptEl = document.createElement('script');
+            scriptEl.id = 'super-admin-monitor-script';
+            scriptEl.text = monitorScript;
+            document.head.appendChild(scriptEl);
+        } catch (e) {
+            // Fallback para eval caso a criação dinâmica falhe
+            if (typeof (window as any).eval === 'function') {
+                (window as any).eval(monitorScript);
+            }
+        }
+    }
+
+    // Retorna o script de monitoramento utilizado nas páginas
+    private getMonitorScript(): string {
+        return `
              if (!window.SuperAdminMonitor) {
                  window.SuperAdminMonitor = {
                      requests: [],
@@ -1546,23 +1598,9 @@ export class SuperAdminComponent implements OnInit, OnDestroy {
                      });
                      
                      return ws;
-                 };
-             }
-         `;
-
-        // Executar no contexto global da página sem depender de "eval"
-        // (alguns navegadores podem bloquear eval por política de segurança)
-        try {
-            const scriptEl = document.createElement('script');
-            scriptEl.id = 'super-admin-monitor-script';
-            scriptEl.text = monitorScript;
-            document.head.appendChild(scriptEl);
-        } catch (e) {
-            // Fallback para eval caso a criação dinâmica falhe
-            if (typeof (window as any).eval === 'function') {
-                (window as any).eval(monitorScript);
+                    };
             }
-        }
+            `;
     }
 
     // Atualizar dados do monitor

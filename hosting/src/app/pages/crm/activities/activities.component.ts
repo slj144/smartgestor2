@@ -3,6 +3,7 @@
 // 🎯 VERSÃO FINAL COMPLETA COM TODAS AS CORREÇÕES
 
 import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -28,6 +29,7 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
   public filteredActivities: any[] = [];
   public leads: any[] = [];
   public loading = true;
+  private viewActivityId: string | null = null;
   // Adicione este método na classe ActivitiesComponent
 
   public getTimeFromDate(dateString: string): string {
@@ -262,7 +264,9 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
     private crmService: CrmService,
     private alertService: AlertService,
     private iToolsService: IToolsService,
-    private detectionService: ActivityDetectionService  // ADICIONAR ESTA LINHA
+    private detectionService: ActivityDetectionService, // ADICIONAR ESTA LINHA
+    private route: ActivatedRoute
+
 
   ) { }
 
@@ -275,6 +279,11 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
     });
     this.loadData();
     this.loadAssignedToOptions();
+    this.route.queryParams.subscribe(params => {
+      if (params['atividade']) {
+        this.viewActivityId = params['atividade'];
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -297,6 +306,13 @@ export class ActivitiesComponent implements OnInit, OnDestroy {
         this.allActivities = this.processActivities(activities);
         this.applyFilters();
         this.loading = false;
+        if (this.viewActivityId) {
+          const act = this.allActivities.find(a => a._id === this.viewActivityId);
+          if (act) {
+            this.editActivity(act);
+            this.viewActivityId = null;
+          }
+        }
       });
 
     // Carregar leads

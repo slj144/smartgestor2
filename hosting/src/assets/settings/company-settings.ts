@@ -23,6 +23,13 @@ export class ProjectSettings {
     const defaultProject = window.location.pathname.split("/")[1];
     let subdomain = currentLoginData ? currentLoginData.projectId : defaultProject;
     subdomain = subdomain || defaultProject;
+    // Quando estivermos em rotas administrativas (ex: super-admin),
+    // o path não representa um projectId válido. Nestes casos devemos
+    // retornar o projeto padrão utilizado para operações globais.
+    const adminRoutes = ['super-admin', 'admin'];
+    if (adminRoutes.includes(subdomain)) {
+      return 'bm-iparttsdev';
+    }
 
     return (subdomain != 'localhost' ? subdomain : 'bm-iparttsdev');
   }
